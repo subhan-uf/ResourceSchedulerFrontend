@@ -40,9 +40,9 @@ export default function SignInbox({ signIn }) {
         />
 
         {/* Submit Button */}
-        <Button variant="outlined" onClick={handleSignIn} fullWidth>
+        <a href='/dashboard'><Button variant="outlined" onClick={handleSignIn} fullWidth>
           Sign In
-        </Button>
+        </Button></a>
       </Box>
     </AppProvider>
   );
