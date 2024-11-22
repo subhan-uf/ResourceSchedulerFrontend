@@ -44,7 +44,10 @@ const CompensatoryTimetable = ({
 
   return (
     <div className="flex flex-col items-center p-4 bg-gray-100 min-h-fit">
-      <h1 className="text-2xl font-bold mb-6">Select Compensatory Slots</h1>
+      <h1 className="text-2xl font-bold mb-3">Select Compensatory Slots</h1>
+      
+      <h5 style={{color:'#006A67'}}>Click on a slot to select it</h5>
+      <br/>
       <table className="w-full table-fixed border-collapse border border-gray-300"
       >
         {/* Table Head */}
@@ -133,6 +136,8 @@ const CompensatoryTimetable = ({
           ))}
         </tbody>
       </table>
+      
+     
     </div>
   );
 };
