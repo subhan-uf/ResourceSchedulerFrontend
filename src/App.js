@@ -13,6 +13,7 @@ import Report from './components/report';
 import Room from './components/room';
 import Teacher from './components/teacher';
 import User from './components/user';
+import './index.css';
 
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 

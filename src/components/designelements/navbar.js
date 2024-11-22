@@ -115,7 +115,7 @@ function ResponsiveAppBar({isLoggedIn, onLogin, onLogout}) {
               textDecoration: 'none',
             }}
           >
-            University Scheduler
+            <a href='/dashboard'>University Scheduler</a>
           </Typography>
           <Box sx={{ flexGrow: 1, display: { xs: 'none', md: 'flex' } }}>
             {pages.map((page) => (

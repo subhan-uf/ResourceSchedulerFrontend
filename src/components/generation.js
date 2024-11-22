@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import TeacherTabs from "./designelements/tabforall";
 import TextField from '@mui/material/TextField';
 import Dropdown from "./designelements/multipledropdown";
@@ -7,11 +7,37 @@ import Singledropdown from "./designelements/singledropdown";
 import Buttonn from "./designelements/button";
 import Button from '@mui/joy/Button';
 import ButtonGroup from '@mui/joy/ButtonGroup';
+import Timetable from "./designelements/timetable";
 
 function Generation() {
     const tableHeadings = ['Teacher ID', 'Name', "NIC", 'Email', 'Phone', 'Batch', 'Section', 'Course (Lab/Theory)'];
     const tableRows = [];
+    const [lockedSlots, setLockedSlots] = useState([]);
 
+    const TimetableData= [
+        // Sample data: Replace this with the actual timetable data
+        { time: "08:30 - 09:20", days: ["", "DWH", "", "NLP", ""] },
+        { time: "09:20 - 10:10", days: ["", "NLP", "", "NIS", ""] },
+        { time: "10:10 - 11:00", days: ["", "NLP", "", "NIS", ""] },
+        { time: "11:30 - 12:20", days: ["DWH (pr)","NIS","","DWH",""] },
+        { time: "12:20 - 01:10", days: ["DWH (pr)","OB","","DWH",""] },
+        { time: "02:00 - 02:50", days: ["NIS (pr)","","","OB",""] },
+        { time: "02:50 - 03:40", days: ["NIS (pr)","","","OB",""] },
+        { time: "03:40 - 04:30", days: ["","","","",""] },
+      ]
+      const slotColors = {
+        "0-3": "bg-green-200",
+        "0-4": "bg-green-200",
+        "1-1": "bg-yellow-200", // Monday 08:30-09:20
+        "1-2": "bg-yellow-200", // Tuesday 10:10-11:00
+        "1-4": "bg-red-200", // Friday 09:20-10:10
+        "3-3": "bg-red-200",
+        "3-4": "bg-red-200",
+        "3-5": "bg-yellow-200", // Monday 08:30-09:20
+        "3-6": "bg-yellow-200",
+        "3-1": "bg-green-200",
+        "3-2": "bg-green-200",
+      };
     const tabLabels = ['Generate timetable'];
     const tabContent = [
         <div>
@@ -76,9 +102,22 @@ function Generation() {
                     </Box>
 
                     {/* Placeholder box for timetable display */}
-                    <Box sx={{ gridColumn: 'span 3', display: 'flex', justifyContent: 'center', mt: 2 }}>
-                        <Box sx={{ width: '100%', maxWidth: 800, height: 200, border: '1px solid #ccc', borderRadius: 2 }} />
-                    </Box>
+                    <Box
+  sx={{
+    gridColumn: 'span 3',
+    display: 'flex',
+    justifyContent: 'center',
+    mt: 2,
+  }}
+>
+<div className="w-full max-w-4xl border border-gray-300 rounded-lg p-4">
+    <Timetable timetable={TimetableData} slotColors={slotColors} sectionAndBatch="Section B - Batch 2021" lockedSlots={lockedSlots} onLockedSlotsChange={(updatedSlots) => setLockedSlots(updatedSlots)}/>
+  </div>
+   
+</Box>
+
+
+
 
                     {/* Additional action buttons organized in a button group */}
                     <Box sx={{ gridColumn: 'span 3', display: 'flex', justifyContent: 'center', mt: 2 }}>

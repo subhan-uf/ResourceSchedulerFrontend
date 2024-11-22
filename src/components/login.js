@@ -56,17 +56,11 @@ function Login() {
         mt: "7vh", // Center vertically with margin-top (adjust as needed)
       }}
     >
-      <BasicTabs tabNames={tabNames} onChange={(event, newValue)=> setSelectedTab(newValue)}>
-        <div>
-      
-            <SignInbox signIn={(username, password)=>signIn(username, password)}/>
-           
-        </div>
-        <div>
-            <SignInbox signIn={(username, password)=>signIn(username, password)}/>
-        </div>
+      <BasicTabs tabNames={tabNames} onChange={(event, newValue) => setSelectedTab(tabNames[newValue])}>
+  <SignInbox signIn={(username, password) => signIn(username, password)} role="DEO" />
+  <SignInbox signIn={(username, password) => signIn(username, password)} role="Advisor" />
+</BasicTabs>
 
-      </BasicTabs>
     </Box>
   );
 }

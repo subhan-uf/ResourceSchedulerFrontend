@@ -8,7 +8,7 @@ import Person from '@mui/icons-material/Person';
 import People from '@mui/icons-material/People';
 import Apartment from '@mui/icons-material/Apartment';
 
-export default function RadioButton({ label, options, icons }) {
+export default function RadioButton({ label, options, icons, onChange }) {
   /* 
   - `label`: The aria-label for the RadioGroup, describing the purpose of the group.
   - `options`: An array of strings to display as radio button labels.
@@ -16,7 +16,7 @@ export default function RadioButton({ label, options, icons }) {
   */
 
   return (
-    <RadioGroup aria-label={label} name="custom-radio-group" defaultValue={options[0]}>
+    <RadioGroup aria-label={label} name="custom-radio-group" defaultValue={options[0]} onChange={(event) => onChange(event.target.value)}>
       <List
         sx={{
           minWidth: 240,

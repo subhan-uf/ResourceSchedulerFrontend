@@ -1,60 +1,29 @@
-import * as React from 'react';
-import AspectRatio from '@mui/joy/AspectRatio';
-import Link from '@mui/joy/Link';
-import Card from '@mui/joy/Card';
-import CardContent from '@mui/joy/CardContent';
-import Chip from '@mui/joy/Chip';
-import Typography from '@mui/joy/Typography';
-import{Link as RouterLink} from 'react-router-dom'
-export default function Cards({heading, subtext, imageSrc, linkTo}) {
+import React from "react";
+import { Link as RouterLink } from "react-router-dom";
+
+export default function Cards({ heading, subtext, imageSrc, linkTo }) {
   return (
-   
-    <Card
-      variant="outlined"
-      orientation="horizontal"
-      sx={{
-        width: 320,
-        '&:hover': { boxShadow: 'md', borderColor: 'neutral.outlinedHoverBorder' },
-      }}
-      component={RouterLink}
+    <RouterLink
       to={linkTo}
-      style={{textDecoration:'none'}}
+      className="block w-80 p-4 bg-white rounded-lg shadow-md hover:shadow-lg transform hover:scale-105 transition-transform duration-300"
+      style={{ textDecoration: "none" }}
     >
-      <AspectRatio ratio="1" sx={{ width: 90 }}>
-        <img
-          src={imageSrc}
-          loading="lazy"
-          alt=""
-        />
-      </AspectRatio>
-      <CardContent>
-        <Typography level="title-lg" id="card-description">
-          {heading}
-        </Typography>
-        <Typography
-          level="body-sm"
-          aria-describedby="card-description"
-          sx={{ mb: 1 }}
-        >
-          <Link
-            overlay
-            underline="none"
-            href="#interactive-card"
-            sx={{ color: 'text.tertiary' }}
-          >
-            {subtext}
-          </Link>
-        </Typography>
-        {/* <Chip
-          variant="outlined"
-          color="primary"
-          size="sm"
-          sx={{ pointerEvents: 'none' }}
-        >
-          Cool weather all day long
-        </Chip> */}
-      </CardContent>
-    </Card>
- 
+      <div className="flex items-center space-x-4">
+        {/* Image Section */}
+        <div className="flex-shrink-0 w-20 h-20">
+          <img
+            src={imageSrc}
+            alt={heading}
+            className="w-full h-full object-cover rounded-md"
+          />
+        </div>
+
+        {/* Content Section */}
+        <div className="flex flex-col">
+          <h3 className="text-lg font-semibold text-gray-800">{heading}</h3>
+          <p className="text-sm text-gray-600 mt-1">{subtext}</p>
+        </div>
+      </div>
+    </RouterLink>
   );
 }

@@ -67,7 +67,7 @@ function Preference() {
         };
 
         try {
-            const response = await axios.post("https://6b62a317-65fe-4117-8d24-4a42f3a68cf2.mock.pstmn.io/preference", dataToSubmit);
+            const response = await axios.post("https://6c836a05-f1dc-4255-aa6b-26be7ad9cba1.mock.pstmn.io/preference", dataToSubmit);
             if (response.status === 200) {
                 console.log("Submission successful", response.data);
             } else {
