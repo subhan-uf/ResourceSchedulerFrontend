@@ -6,8 +6,13 @@ import Dropdown from "./designelements/multipledropdown";
 import { Box, Button, FormControl } from "@mui/material";
 import axios from "axios";
 import BasicBreadcrumbs from "./designelements/breadcrumbs";
-
+import Singledropdown from "./designelements/singledropdown";
+import RadioButton from "./designelements/radiobutton";
+import ComputerIcon from '@mui/icons-material/Computer';
+import MenuBookIcon from '@mui/icons-material/MenuBook';
 function Teacher() {
+  const [sessionType, setSessionType] = useState(""); // State for Lab or Theory
+  
   const breadcrumbs1 = [
     { label: 'Dashboard', url: '/dashboard' },
     { label: 'view list of teachers', url: '' },
@@ -89,12 +94,12 @@ function Teacher() {
     const tabLabels = ['View list of teachers', "Enter new teacher"];
     const tabContent = [
       <div>
-        <BasicBreadcrumbs breadcrumbs={breadcrumbs1}/>
-      <Tables tableHeadings={tableHeadings} tableRows={tableRows} /> 
+        <BasicBreadcrumbs breadcrumbs={breadcrumbs1} />
+        <Tables tableHeadings={tableHeadings} tableRows={tableRows} />
       </div>,
 
       <div>
-        <BasicBreadcrumbs breadcrumbs={breadcrumbs2}/>
+        <BasicBreadcrumbs breadcrumbs={breadcrumbs2} />
         <form onSubmit={handleSubmit}>
           <Box
             sx={{
@@ -120,8 +125,8 @@ function Teacher() {
               value={formData.teacherId}
               onChange={handleInputChange}
               sx={{
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: '15px', // Set your custom border radius here
+                "& .MuiOutlinedInput-root": {
+                  borderRadius: "15px", // Set your custom border radius here
                 },
               }}
             />
@@ -136,8 +141,8 @@ function Teacher() {
               value={formData.phone}
               onChange={handleInputChange}
               sx={{
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: '15px', // Set your custom border radius here
+                "& .MuiOutlinedInput-root": {
+                  borderRadius: "15px", // Set your custom border radius here
                 },
               }}
             />
@@ -152,8 +157,8 @@ function Teacher() {
               value={formData.name}
               onChange={handleInputChange}
               sx={{
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: '15px', // Set your custom border radius here
+                "& .MuiOutlinedInput-root": {
+                  borderRadius: "15px", // Set your custom border radius here
                 },
               }}
             />
@@ -168,8 +173,8 @@ function Teacher() {
               value={formData.maxClasses}
               onChange={handleInputChange}
               sx={{
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: '15px', // Set your custom border radius here
+                "& .MuiOutlinedInput-root": {
+                  borderRadius: "15px", // Set your custom border radius here
                 },
               }}
             />
@@ -184,8 +189,8 @@ function Teacher() {
               value={formData.email}
               onChange={handleInputChange}
               sx={{
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: '15px', // Set your custom border radius here
+                "& .MuiOutlinedInput-root": {
+                  borderRadius: "15px", // Set your custom border radius here
                 },
               }}
             />
@@ -200,8 +205,8 @@ function Teacher() {
               value={formData.NIC}
               onChange={handleInputChange}
               sx={{
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: '15px', // Set your custom border radius here
+                "& .MuiOutlinedInput-root": {
+                  borderRadius: "15px", // Set your custom border radius here
                 },
               }}
             />
@@ -213,7 +218,6 @@ function Teacher() {
                 value={formData.courses} // Correctly bind value to formData
                 onChange={handleMultiSelectChange("courses")}
                 multiple
-                
               />
             </FormControl>
 
@@ -254,6 +258,15 @@ function Teacher() {
                 multiple
               />
             </FormControl>
+            <FormControl>
+            <RadioButton
+              label="Select session type"
+              options={["Lab", "Theory"]}
+              icons={[<ComputerIcon />, <MenuBookIcon />]}
+              onChange={(value) => setSessionType(value)}
+              required
+            />
+            </FormControl>
 
             <Box sx={{ gridColumn: "span 2", textAlign: "center", mt: 2 }}>
               <Button
@@ -261,10 +274,8 @@ function Teacher() {
                 color="primary"
                 type="submit"
                 sx={{
-                  borderRadius: '10px', // Adjust this value to your desired border radius
+                  borderRadius: "10px", // Adjust this value to your desired border radius
                 }}
-              
-                
                 required
               >
                 Submit

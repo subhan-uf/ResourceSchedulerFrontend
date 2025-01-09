@@ -118,6 +118,21 @@ function Compensatory() {
 
                     <FormControl fullWidth required>
                         <Singledropdown
+                            label="Batch"
+                            menuItems={[
+                                { label: '2021' },
+                                { label: '2022' },
+                                { label: '2023' },
+                                { label: '2023' },
+                            ]}
+                            value={section} // Bind state
+    onChange={(newValue) => setSection(newValue.target.value)} // Update state
+                            required
+                        />
+                    </FormControl>
+
+                    <FormControl fullWidth required>
+                        <Singledropdown
                             label="Section"
                             menuItems={[
                                 { label: 'A' },

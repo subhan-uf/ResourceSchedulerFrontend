@@ -82,18 +82,7 @@ function Generation() {
                         />
                     </FormControl>
 
-                    <FormControl fullWidth required>
-                        <Singledropdown 
-                            label="Disable days" 
-                            menuItems={[
-                                { label: 'Monday' },
-                                { label: 'Tuesday' },
-                                { label: 'Wednesday' },
-                            ]}
-                            full
-                            required
-                        />
-                    </FormControl>
+                  
                     
                     {/* Main action buttons for timetable generation */}
                     <Box sx={{ gridColumn: 'span 3', display: 'flex', justifyContent: 'center', gap: 2, mt: 2 }}>

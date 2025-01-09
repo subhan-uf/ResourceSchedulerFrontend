@@ -1,71 +1,73 @@
 import React, { useState } from "react";
-import axios from "axios";
+import AuthService from "./api/authService";
 import Box from "@mui/material/Box";
 import BasicTabs from "./designelements/tabs";
-import TextField from "@mui/material/TextField";
-import Button from '@mui/material/Button';
-import Typography from '@mui/material/Typography';
 import SignInbox from "./designelements/signing";
-
+import { useNavigate } from "react-router-dom";
 
 function Login() {
   const tabNames = ["DEO", "Advisor"];
-  const [selectedTab, setSelectedTab]=useState("DEO");
-  
-  const signIn= async(username, password) =>{
-    try{
-      const response= await axios.post(
-        "https://32e9acb7-9bc4-4143-abda-861f06d69b58.mock.pstmn.io/deo/login/",
-        {
-          username: username,
-          password: password,
-        },
-        {
-          header:{
-            "Content-Type": "application/json",
+  const [selectedTab, setSelectedTab] = useState(0);  // Track selected tab (0 or 1)
+  const navigate = useNavigate();
 
-          },
+  const signIn = async (username, password) => {
+    try {
+      const role = tabNames[selectedTab];  // Get role from tabNames dynamically
+      const credentials = { username, password };
+      const response = await AuthService.login(credentials, role.toLowerCase());
+      
+      if (response.status === 200) {
+        console.log("Login Successful", response.data);
+        localStorage.setItem('accessToken', response.data.access);
+        localStorage.setItem('refreshToken', response.data.refresh);
+        window.dispatchEvent(new Event('storage'));
+
+        console.log("Access Token Saved:", response.data.access);
+  
+        if (role === "Advisor") {
+          navigate("/dashboard");
         }
-      )
-
-      if (response.status===200){
-        console.log("Login Successful", response.data)
+        else{
+          navigate("/dashboard")
+        }
+      } else {
+        console.error("Login failed", response.data);
       }
-      else{
-        console.error("Login failed", response.data)
-      }
+    } catch (error) {
+      console.error("Error during login", error);
+      alert("Invalid Credentials")
     }
-      catch(error){
-        console.error("Error during login", error)
-      }
-    }
+  };
 
-  
-  
+  const handleTabChange = (event, newValue) => {
+    setSelectedTab(newValue);  // Update active tab
+  };
+
   return (
     <Box
       component="section"
       sx={{
-        width: 400, // Set a fixed width for the box
-        p: 3, // Adjust padding as needed
+        width: 400,
+        p: 3,
         border: "1px dashed grey",
-        borderRadius: 2, // Add some border-radius for rounded corners
-        boxShadow: 3, // Optional: Add a shadow for some elevation
-        backgroundColor: "white", // Set background color
-        mx: "auto", // Center horizontally
-        mt: "7vh", // Center vertically with margin-top (adjust as needed)
+        borderRadius: 2,
+        boxShadow: 3,
+        backgroundColor: "white",
+        mx: "auto",
+        mt: "7vh",
       }}
     >
-      <BasicTabs tabNames={tabNames} onChange={(event, newValue) => setSelectedTab(tabNames[newValue])}>
-  <SignInbox signIn={(username, password) => signIn(username, password)} role="DEO" />
-  <SignInbox signIn={(username, password) => signIn(username, password)} role="Advisor" />
-</BasicTabs>
+      {/* Tabs for switching roles */}
+      <BasicTabs tabNames={tabNames} onChange={handleTabChange} />
 
+      {/* Render SignInbox dynamically based on active tab */}
+      <SignInbox signIn={signIn} role={tabNames[selectedTab]} />
     </Box>
   );
 }
 
 export default Login;
+
 
 
 //This was the code in the tabs before for sigin fields 

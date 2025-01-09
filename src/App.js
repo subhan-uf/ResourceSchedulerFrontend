@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import './App.css';
 import Availability from './components/availability';
 import Batch from './components/batch';
@@ -16,34 +16,42 @@ import User from './components/user';
 import './index.css';
 
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import ProtectedRoute from './components/protectedroute';
 
 function App() {
-  const [isLoggedIn, setIsLoggedIn]= React.useState(false)
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
-  const handeLogin=()=>{
-    setIsLoggedIn(true)
-  }
-  const handleLogout=()=>{
-    setIsLoggedIn(false)
-  }
+  useEffect(() => {
+    // Check for token to verify login state
+    const token = localStorage.getItem('accessToken');
+    setIsLoggedIn(!!token);  // Update login state
+  }, []);
+
+  const handleLogout = () => {
+    setIsLoggedIn(false);
+  };
+
+  const handleLogin = () => {
+    setIsLoggedIn(true);
+  };
  
   return (
     <Router>
     <div className="App">
-      <ResponsiveAppBar isLoggedIn={isLoggedIn} onLogin={handeLogin} onLogout={handleLogout}/>
+      <ResponsiveAppBar isLoggedIn={isLoggedIn} onLogin={handleLogin} onLogout={handleLogout}/>
       <Routes>
-        <Route path='/' element={<Login/>}/>
+      <Route path="/" element={<Login onLogin={handleLogin} />} />
         <Route path='/availability' element={<Availability/>}/>
-        <Route path='/batch' element={<Batch/>}/>
+        <Route path='/batch' element={<ProtectedRoute><Batch/></ProtectedRoute>}/>
         <Route path='/Compensatory' element={<Compensatory/>}/>
-        <Route path='/Course' element={<Course/>}/>
-        <Route path='/dashboard' element={<Dashboard/>}/>
-        <Route path='/generation' element={<Generation/>}/>
-        <Route path='/preference' element={<Preference/>}/>
-        <Route path='/report' element={<Report/>}/>
-        <Route path='/room' element={<Room/>}/>
-        <Route path='/Teacher' element={<Teacher/>}/>
-        <Route path='/user' element={<User/>}/>
+        <Route path='/Course' element={<ProtectedRoute><Course/></ProtectedRoute>}/>
+        <Route path='/dashboard' element={<ProtectedRoute><Dashboard/></ProtectedRoute>}/>
+        <Route path='/generation' element={<ProtectedRoute><Generation/></ProtectedRoute>}/>
+        <Route path='/preference' element={<ProtectedRoute><Preference/></ProtectedRoute>}/>
+        <Route path='/report' element={<ProtectedRoute><Report/></ProtectedRoute>}/>
+        <Route path='/room' element={<ProtectedRoute><Room/></ProtectedRoute>}/>
+        <Route path='/Teacher' element={<ProtectedRoute><Teacher/></ProtectedRoute>}/>
+        <Route path='/user' element={<ProtectedRoute><User/></ProtectedRoute>}/>
       </Routes>
     </div>
     </Router>

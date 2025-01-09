@@ -3,7 +3,7 @@ import PropTypes from 'prop-types';
 import Tabs from '@mui/material/Tabs';
 import Tab from '@mui/material/Tab';
 import Box from '@mui/material/Box';
-// import CustomTabPanel from './CustomTabPanel';
+
 function CustomTabPanel(props) {
   const { children, value, index, ...other } = props;
 
@@ -33,39 +33,44 @@ function allyProps(index) {
   };
 }
 
-export default function BasicTabs({ tabNames, children }) {
-    const [value, setValue] = React.useState(0);
-  
-    const handleChange = (event, newValue) => {
-      setValue(newValue);
-    };
-  
-    return (
-      <Box sx={{ width: '100%' }}>
-        <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-          <Tabs
-            value={value}
-            onChange={handleChange}
-            aria-label="basic tabs example"
-            variant="fullWidth"
-            centered
-          >
-            {tabNames.map((name, index) => (
-              <Tab key={index} label={name} {...allyProps(index)} />
-            ))}
-          </Tabs>
-        </Box>
-        {React.Children.map(children, (child, index) => (
-          <CustomTabPanel value={value} index={index}>
-            {child}
-          </CustomTabPanel>
-        ))}
-      </Box>
-    );
-  }
-  
+export default function BasicTabs({ tabNames, children, onChange }) {
+  const [value, setValue] = React.useState(0);  // Tracks the active tab index
 
-BasicTabs.propTypes={
-    tabNames: PropTypes.arrayOf(PropTypes.string).isRequired,
-    children: PropTypes.node.isRequired,
+  const handleChange = (event, newValue) => {
+    setValue(newValue);  // Update local state to reflect the active tab
+    if (onChange) {
+      onChange(event, newValue);  // Pass the change to parent component
+    }
+  };
+
+  return (
+    <Box sx={{ width: '100%' }}>
+      <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+        <Tabs
+          value={value}
+          onChange={handleChange}  // Correctly handles tab switch
+          aria-label="basic tabs example"
+          variant="fullWidth"
+          centered
+        >
+          {tabNames.map((name, index) => (
+            <Tab key={index} label={name} {...allyProps(index)} />
+          ))}
+        </Tabs>
+      </Box>
+
+      {/* Render children conditionally based on the active tab */}
+      {React.Children.map(children, (child, index) => (
+        <CustomTabPanel value={value} index={index}>
+          {child}
+        </CustomTabPanel>
+      ))}
+    </Box>
+  );
 }
+
+BasicTabs.propTypes = {
+  tabNames: PropTypes.arrayOf(PropTypes.string).isRequired,
+  children: PropTypes.node.isRequired,
+  onChange: PropTypes.func,  // Allow parent component to handle tab change
+};
