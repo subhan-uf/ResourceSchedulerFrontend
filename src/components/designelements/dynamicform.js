@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Box, Button, TextField, Typography, IconButton, FormControl, InputLabel, Select, MenuItem } from '@mui/material';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import Checkbox from '@mui/joy/Checkbox';
@@ -6,9 +6,13 @@ import Radio from '@mui/joy/Radio';
 import RadioGroup from '@mui/joy/RadioGroup';
 import Dropdown from './multipledropdown';
 
-function DynamicForm({ onPreferencesChange, fields, sectionTitle, getSectionTitle, addButtonText }) {
-  const [sections, setSections] = useState([{ id: 1, values: {} }]);
-
+function DynamicForm({ onPreferencesChange, fields, sectionTitle, getSectionTitle, addButtonText, initialSections }) {
+  const [sections, setSections] = useState(() => initialSections || [{ id: 1, values: {} }]);
+  useEffect(() => {
+    if (initialSections) {
+      setSections(initialSections);
+    }
+  }, [initialSections]);
   // Handler to add a new section
   const handleAddSection = () => {
     const updatedSections = [

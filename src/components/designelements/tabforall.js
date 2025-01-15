@@ -4,14 +4,31 @@ import ListItemDecorator from '@mui/joy/ListItemDecorator';
 import Tabs from '@mui/joy/Tabs';
 import TabList from '@mui/joy/TabList';
 import Tab, { tabClasses } from '@mui/joy/Tab';
-import HomeRoundedIcon from '@mui/icons-material/HomeRounded';
-import FavoriteBorder from '@mui/icons-material/FavoriteBorder';
-import PropTypes from 'prop-types';
 import ListIcon from '@mui/icons-material/List';
 import KeyboardIcon from '@mui/icons-material/Keyboard';
-export default function TabsTeachers({ tabLabels = [], tabContent = [] }) {
-  const [index, setIndex] = React.useState(0);
+import PropTypes from 'prop-types';
+
+export default function TabsTeachers({
+  tabLabels = [],
+  tabContent = [],
+  externalIndex = null,       // new optional prop
+  onIndexChange = null,       // new optional prop
+}) {
+  // local state for index if parent not controlling
+  const [localIndex, setLocalIndex] = React.useState(0);
+
+  // figure out which index to use
+  const currentIndex = externalIndex !== null ? externalIndex : localIndex;
+
   const colors = ['primary', 'danger', 'success', 'warning'];
+
+  const handleTabChange = (event, value) => {
+    if (onIndexChange) {
+      onIndexChange(value);
+    } else {
+      setLocalIndex(value);
+    }
+  };
 
   return (
     <Box
@@ -23,20 +40,20 @@ export default function TabsTeachers({ tabLabels = [], tabContent = [] }) {
         borderTopRightRadius: '12px',
         bgcolor: `${'var(--colors-index)'}.500`,
       }}
-      style={{ '--colors-index': colors[index] }}
+      style={{ '--colors-index': colors[currentIndex] }}
     >
       <Tabs
         size="lg"
         aria-label="Bottom Navigation"
-        value={index}
-        onChange={(event, value) => setIndex(value)}
+        value={currentIndex}
+        onChange={handleTabChange}
         sx={(theme) => ({
           p: 1,
           borderRadius: 16,
           maxWidth: 400,
           mx: 'auto',
           boxShadow: theme.shadow.s,
-          '--joy-shadowChannel': theme.vars.palette[colors[index]].darkChannel,
+          '--joy-shadowChannel': theme.vars.palette[colors[currentIndex]].darkChannel,
           [`& .${tabClasses.root}`]: {
             py: 1,
             flex: 1,
@@ -61,47 +78,44 @@ export default function TabsTeachers({ tabLabels = [], tabContent = [] }) {
                 key={i}
                 disableIndicator
                 orientation="vertical"
-                {...(index === i && { color: colors[i % colors.length] })}
+                {...(currentIndex === i && { color: colors[i % colors.length] })}
               >
                 <ListItemDecorator>
-                  {i === 0 ? <ListIcon/> : <KeyboardIcon />}
+                  {i === 0 ? <ListIcon /> : <KeyboardIcon />}
                 </ListItemDecorator>
                 {label}
               </Tab>
             ))
           ) : (
-            <Tab disabled>No Tabs Available</Tab> // Show a fallback message if no labels
+            <Tab disabled>No Tabs Available</Tab>
           )}
         </TabList>
       </Tabs>
       <Box
         sx={{
-          mt: 3, // Margin top for spacing
+          mt: 3,
           p: 2,
           border: '1px solid #ccc',
           borderRadius: '8px',
           backgroundColor: '#f9f9f9',
         }}
       >
-        {tabContent[index]} {/* Display content based on active tab */}
+        {tabContent[currentIndex]}
       </Box>
-    
-
-
-
     </Box>
-
-    
   );
 }
 
 TabsTeachers.propTypes = {
   tabLabels: PropTypes.arrayOf(PropTypes.string),
   tabContent: PropTypes.arrayOf(PropTypes.node),
+  externalIndex: PropTypes.number,
+  onIndexChange: PropTypes.func,
 };
 
-// Define defaultProps to provide default values if props are not passed
 TabsTeachers.defaultProps = {
-  tabLabels: [], // Default to an empty array
-  tabContent: [], // Default to an empty array
+  tabLabels: [],
+  tabContent: [],
+  externalIndex: null,
+  onIndexChange: null,
 };

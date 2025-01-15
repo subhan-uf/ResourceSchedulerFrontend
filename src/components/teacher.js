@@ -12,7 +12,23 @@ import ComputerIcon from '@mui/icons-material/Computer';
 import MenuBookIcon from '@mui/icons-material/MenuBook';
 function Teacher() {
   const [sessionType, setSessionType] = useState(""); // State for Lab or Theory
-  
+  const label = "Select teacher seniority";
+    const menuItems = [
+        { label: 'Chairman' },
+        { label: 'Professor' },
+        { label: 'Assisntant Professor' },
+        { label: 'Lecturer' },
+        { label: 'Visiting Faculty' },
+    ];
+
+    const label2 = "Select Batch";
+    const menuItems2 = [
+        { label: '2021' },
+        { label: '2022' },
+        { label: '2023' },
+        { label: '2024' },
+        { label: '2025' },
+    ];
   const breadcrumbs1 = [
     { label: 'Dashboard', url: '/dashboard' },
     { label: 'view list of teachers', url: '' },
@@ -210,16 +226,21 @@ function Teacher() {
                 },
               }}
             />
-            <FormControl fullWidth required>
-              <Dropdown
-                heading="Courses (Select Multiple)"
-                name="courses"
-                menuItems={["2021", "2022", "2023", "2024"]}
-                value={formData.courses} // Correctly bind value to formData
-                onChange={handleMultiSelectChange("courses")}
-                multiple
-              />
+            <Singledropdown label={label} menuItems={menuItems} required/>
+            <FormControl>
+            <RadioButton
+              label="Select session type"
+              options={["Lab", "Theory"]}
+              icons={[<ComputerIcon />, <MenuBookIcon />]}
+              onChange={(value) => setSessionType(value)}
+              required
+            />
             </FormControl>
+            <FormControl fullWidth required>
+            <Singledropdown label={label2} menuItems={menuItems2} required/>
+            </FormControl>
+           
+
 
             <FormControl fullWidth required>
               <Dropdown
@@ -234,6 +255,16 @@ function Teacher() {
 
             <FormControl fullWidth required>
               <Dropdown
+                heading="Courses (Select Multiple)"
+                name="courses"
+                menuItems={["2021", "2022", "2023", "2024"]}
+                value={formData.courses} // Correctly bind value to formData
+                onChange={handleMultiSelectChange("courses")}
+                multiple
+              />
+            </FormControl>
+            <FormControl fullWidth required>
+              <Dropdown
                 heading="Health Limitation (Select Multiple)"
                 name="health"
                 menuItems={["None", "Vision", "Hearing", "Mobility"]}
@@ -243,30 +274,8 @@ function Teacher() {
               />
             </FormControl>
 
-            <FormControl fullWidth required>
-              <Dropdown
-                heading="Batch (Select Multiple)"
-                name="batch"
-                menuItems={[
-                  "Batch 2021",
-                  "Batch 2022",
-                  "Batch 2023",
-                  "Batch 2024",
-                ]}
-                value={formData.batch}
-                onChange={handleMultiSelectChange("batch")}
-                multiple
-              />
-            </FormControl>
-            <FormControl>
-            <RadioButton
-              label="Select session type"
-              options={["Lab", "Theory"]}
-              icons={[<ComputerIcon />, <MenuBookIcon />]}
-              onChange={(value) => setSessionType(value)}
-              required
-            />
-            </FormControl>
+            
+            
 
             <Box sx={{ gridColumn: "span 2", textAlign: "center", mt: 2 }}>
               <Button

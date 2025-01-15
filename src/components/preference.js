@@ -32,6 +32,7 @@ function Preference() {
         { componentType: 'SingleDropdown', label: 'End time', name: 'endTime', options: ['9:20','10:10','11:30','12:20','2:00','2:50','3:40','4:30'] },
         { componentType: 'Checkbox', label: 'Multimedia', name: 'multimedia' },
         { componentType: 'Checkbox', label: 'Speaker', name: 'speaker' },
+        { componentType: 'Checkbox', label: 'Hard Constraint', name: 'hard_constraint' },
     ];
     
     const getSectionTitle = (id) => `Preference ${id}`;
