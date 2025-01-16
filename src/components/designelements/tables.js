@@ -66,39 +66,40 @@ export default function Tables({
                   {heading}
                 </th>
               ))}
-              <th aria-label="last" style={{ width: "var(--Table-lastColumnWidth)" }} />
+              {!tableHeadings.includes("Actions") && (
+      <th style={{ width: "var(--Table-lastColumnWidth)" }}>Actions</th>
+    )}
             </tr>
           </thead>
           <tbody>
-            {tableRows.map((row, rowIndex) => (
-              <tr key={rowIndex}>
-                {/* row except last element (the last is ID) */}
-                {row.slice(0, -1).map((cell, cellIndex) => (
-                  <td key={cellIndex}>{cell}</td>
-                ))}
-                <td>
-                  <Box sx={{ display: "flex", gap: 1 }}>
-                    <Button
-                      size="sm"
-                      variant="plain"
-                      color="neutral"
-                      onClick={() => onEdit(row)}
-                    >
-                      Edit
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="soft"
-                      color="danger"
-                      onClick={() => onDelete(row)}
-                    >
-                      Delete
-                    </Button>
-                  </Box>
-                </td>
-              </tr>
-            ))}
-          </tbody>
+  {tableRows.map((row, rowIndex) => (
+    <tr key={rowIndex}>
+      {tableHeadings.slice(0, -1).map((_, cellIndex) => (
+        <td key={cellIndex}>{row[cellIndex] || ''}</td>
+      ))}
+      <td>
+        <Box sx={{ display: "flex", gap: 1 }}>
+          <Button
+            size="sm"
+            variant="plain"
+            color="neutral"
+            onClick={() => onEdit(row)}
+          >
+            Edit
+          </Button>
+          <Button
+            size="sm"
+            variant="soft"
+            color="danger"
+            onClick={() => onDelete(row)}
+          >
+            Delete
+          </Button>
+        </Box>
+      </td>
+    </tr>
+  ))}
+</tbody>
         </Table>
       </Sheet>
     </Box>

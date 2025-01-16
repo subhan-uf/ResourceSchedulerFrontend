@@ -68,7 +68,7 @@ const [snackbarColor, setSnackbarColor] = useState('neutral'); // success, dange
   // -----------------------------
   // Build Table Rows
   // -----------------------------
-  const tableHeadings = ["Batch name", "Year", "Sections", "Max students per section"];
+  const tableHeadings = ["Batch name", "Year", "Sections", "Max students per section", "Actions"];
   const tableRows = batches.map((batch) => {
     // This is the actual primary key. If your backend returns "id",
     // use `batch.id`. If it returns "Batch_ID" as the real PK,
@@ -315,19 +315,35 @@ const [snackbarColor, setSnackbarColor] = useState('neutral'); // success, dange
           onChange={(e) => setBatchData({ ...batchData, Batch_name: e.target.value })}
         />
         <FormControl fullWidth required>
+  <Singledropdown
+    label="Year"
+    menuItems={[
+      { label: "2021", value: "2021" },
+      { label: "2022", value: "2022" },
+      { label: "2023", value: "2023" },
+      { label: "2024", value: "2024" },
+      { label: "2025", value: "2025" },
+    ]}
+    value={batchData.Year} // Controlled value
+    onChange={(selectedValue) =>
+      setBatchData({ ...batchData, Year: selectedValue }) // Update state with selected value
+    }
+  />
+</FormControl>
+{/* <FormControl fullWidth required>
           <Singledropdown
             label="Year"
             menuItems={[
-              { label: "2021" },
-              { label: "2022" },
-              { label: "2023" },
-              { label: "2024" },
-              { label: "2025" },
+              { label: "2021", value: "2021" },
+              { label: "2022", value: "2022" },
+              { label: "2023", value: "2023" },
+              { label: "2024", value: "2024" },
+              { label: "2025", value: "2025" },
             ]}
             value={batchData.Year}
             onChange={(e) => setBatchData({ ...batchData, Year: e.target.value })}
           />
-        </FormControl>
+        </FormControl> */}
         <FormControl fullWidth required>
         <DynamicForm
   fields={fields}
