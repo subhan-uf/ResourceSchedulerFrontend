@@ -29,53 +29,49 @@ const MenuProps = {
 //   };
 // }
 
-export default function Dropdown({heading='Selected Items', menuItems=[], required, value, onChange}) {
+export default function Dropdown({ heading = 'Selected Items', menuItems = [], required, value = [], onChange }) {
   const theme = useTheme();
-  // const [selectedItems, setSelectedItems] = React.useState([]);
-
-  // const handleChange = (event) => {
-  //   const {
-  //     target: { value },
-  //   } = event;
-  //   setSelectedItems(
-  //     // On autofill we get a stringified value.
-  //     typeof value === 'string' ? value.split(',') : value,
-  //   );
-  // };
 
   return (
     <div>
-      <FormControl sx={{ m: 1, width: 300, borderRadius:'100px' }} required={required}>
-        <InputLabel id="demo-multiple-chip-label">{heading}</InputLabel>
+      <FormControl sx={{ m: 1, width: 300, borderRadius: '100px' }} required={required}>
+        <InputLabel id="dropdown-label">{heading}</InputLabel>
         <Select
-          labelId="demo-multiple-chip-label"
-          id="demo-multiple-chip"
+          labelId="dropdown-label"
+          id="dropdown"
           multiple
           value={value}
-          onChange={onChange}
-          input={<OutlinedInput id="select-multiple-chip" label={heading}  sx={{
-            borderRadius: '13px', // Set custom border radius here
-          }}/>}
+          onChange={(event) => {
+            const selectedValues = event.target.value.map((item) => item.value || item); // Ensure selected value is mapped correctly
+            onChange(selectedValues);
+          }}
+          input={
+            <OutlinedInput
+              id="select-multiple-chip"
+              label={heading}
+              sx={{ borderRadius: '13px' }}
+            />
+          }
           renderValue={(selected) => (
             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-              {selected.map((value) => (
-                <Chip key={value} label={value} />
+              {selected.map((item, index) => (
+                <Chip key={index} label={menuItems.find((mi) => mi.value === item)?.label || item} />
               ))}
             </Box>
           )}
           MenuProps={MenuProps}
         >
-          {(Array.isArray(menuItems) ? menuItems : []).map((item) => ( // Check if menuItems is an array
+          {menuItems.map((item) => (
             <MenuItem
-              key={item}
-              value={item}
+              key={item.value}
+              value={item.value}
               style={{
-                fontWeight: value.includes(item) // Update to selectedItems
+                fontWeight: value.includes(item.value)
                   ? theme.typography.fontWeightMedium
                   : theme.typography.fontWeightRegular,
               }}
             >
-              {item}
+              {item.label}
             </MenuItem>
           ))}
         </Select>

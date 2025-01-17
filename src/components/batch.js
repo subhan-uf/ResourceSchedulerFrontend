@@ -125,9 +125,9 @@ const [snackbarColor, setSnackbarColor] = useState('neutral'); // success, dange
       //    If your server doesn't support "get all sections" + filter,
       //    do "getSectionById" or "getSectionsByBatchID" logic as needed.
       const sectionsResp = await SectionService.getAllSections();
-      const batchSections = sectionsResp.data.filter(
-        (sec) => sec.Batch_ID === batchId
-      );
+    const batchSections = sectionsResp.data
+      .filter((sec) => sec.Batch_ID === batchId)
+      .sort((a, b) => a.Section_ID - b.Section_ID);
       
       // 4) Convert them for DynamicForm
       const dynamicFormSections = batchSections.map((sec) => ({
@@ -266,8 +266,8 @@ const [snackbarColor, setSnackbarColor] = useState('neutral'); // success, dange
     { componentType: "TextField", label: "Max Students", name: "Max_students", type: "number" },
     { componentType: "TextField", label: "Max Class Gaps per Day", name: "Max_gaps", type: "number" },
   ];
-
-  const getSectionTitle = (id) => `Section ${String.fromCharCode(64 + id)}`;
+  
+  const getSectionTitle = (index) => `Section ${String.fromCharCode(65 + index)}`;
 
   // -----------------------------
   // Tabs
@@ -305,15 +305,6 @@ const [snackbarColor, setSnackbarColor] = useState('neutral'); // success, dange
           backgroundColor: "#f5f5f5",
         }}
       >
-        <TextField
-          label="Batch name"
-          variant="outlined"
-          type="text"
-          fullWidth
-          required
-          value={batchData.Batch_name}
-          onChange={(e) => setBatchData({ ...batchData, Batch_name: e.target.value })}
-        />
         <FormControl fullWidth required>
   <Singledropdown
     label="Year"
@@ -325,11 +316,29 @@ const [snackbarColor, setSnackbarColor] = useState('neutral'); // success, dange
       { label: "2025", value: "2025" },
     ]}
     value={batchData.Year} // Controlled value
-    onChange={(selectedValue) =>
-      setBatchData({ ...batchData, Year: selectedValue }) // Update state with selected value
-    }
+    onChange={(selectedValue) => {
+      // Update year and auto-generate Batch_name
+      setBatchData({
+        ...batchData,
+        Year: selectedValue,
+        Batch_name: `Batch ${selectedValue}`, // Automatically generate the batch name
+      });
+    }}
   />
 </FormControl>
+        <TextField
+          label="Batch name"
+          variant="outlined"
+          type="text"
+          fullWidth
+          required
+          value={batchData.Batch_name}
+          InputProps={{
+            readOnly: true, // Make it non-editable
+          }}
+          onChange={(e) => setBatchData({ ...batchData, Batch_name: e.target.value })}
+        />
+        
 {/* <FormControl fullWidth required>
           <Singledropdown
             label="Year"
@@ -348,11 +357,22 @@ const [snackbarColor, setSnackbarColor] = useState('neutral'); // success, dange
         <DynamicForm
   fields={fields}
   sectionTitle="Section"
-  getSectionTitle={getSectionTitle}
+  getSectionTitle={(index) => getSectionTitle(index)} 
   addButtonText="Add new Section"
-  onPreferencesChange={(updatedSections) => setSections(updatedSections)}
+  onPreferencesChange={(updatedSections) => {
+    // Automatically assign names
+    const updatedSectionsWithNames = updatedSections.map((section, index) => ({
+      ...section,
+      values: {
+        ...section.values,
+        Section_name: `Section ${String.fromCharCode(65 + index)}`, // Automatically set Section name as A, B, C...
+      },
+    }));
+    setSections(updatedSectionsWithNames);
+  }}
   initialSections={sections} // Pass the sections state here
 />
+
         </FormControl>
         <Box sx={{ gridColumn: "span 2", textAlign: "center", mt: 2 }}>
           <Button variant="contained" color="primary" type="submit" fullWidth>
