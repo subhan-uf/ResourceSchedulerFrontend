@@ -268,6 +268,7 @@ const [snackbarColor, setSnackbarColor] = useState('neutral'); // success, dange
   ];
   
   const getSectionTitle = (index) => `Section ${String.fromCharCode(65 + index)}`;
+  
 
   // -----------------------------
   // Tabs

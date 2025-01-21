@@ -2,11 +2,11 @@ import axios from 'axios';
 
 // Create a base instance of Axios
 const apiClient = axios.create({
-  baseURL: 'https://fypbackend-d1rs.onrender.com/api', // Replace with your backend URL
+  baseURL: 'http://127.0.0.1:8000/api', // Replace with your backend URL
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 5000, // Optional timeout of 5 seconds
+  timeout: 15000, // Optional timeout of 5 seconds
 });
 
 // ========= Token Handling ============
@@ -67,7 +67,7 @@ apiClient.interceptors.response.use(
 
       try {
         const refreshToken = localStorage.getItem('refreshToken');
-        const response = await axios.post('https://fypbackend-d1rs.onrender.com/api/refresh-token/', {
+        const response = await axios.post('http://127.0.0.1:8000/api/refresh-token/', {
           refresh: refreshToken,
         });
 
