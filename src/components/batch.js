@@ -23,6 +23,7 @@ const [snackbarColor, setSnackbarColor] = useState('neutral'); // success, dange
   // States
   // -----------------------------
   const [batchData, setBatchData] = useState({
+    Discipline:"",
     Batch_name: "",
     Year: "",
   });
@@ -68,7 +69,7 @@ const [snackbarColor, setSnackbarColor] = useState('neutral'); // success, dange
   // -----------------------------
   // Build Table Rows
   // -----------------------------
-  const tableHeadings = ["Batch name", "Year", "Sections", "Max students per section", "Actions"];
+  const tableHeadings = ["Discipline","Batch name", "Year", "Sections", "Max students per section", "Actions"];
   const tableRows = batches.map((batch) => {
     // This is the actual primary key. If your backend returns "id",
     // use `batch.id`. If it returns "Batch_ID" as the real PK,
@@ -88,6 +89,7 @@ const [snackbarColor, setSnackbarColor] = useState('neutral'); // success, dange
     });
 
     return [
+      batch.Discipline,
       batch.Batch_name,
       batch.Year,
       numSections,
@@ -117,6 +119,7 @@ const [snackbarColor, setSnackbarColor] = useState('neutral'); // success, dange
 
       // 2) Pre-fill batchData
       setBatchData({
+        Discipline: foundBatch.Discipline,
         Batch_name: foundBatch.Batch_name,
         Year: foundBatch.Year,
       });
@@ -306,6 +309,23 @@ const [snackbarColor, setSnackbarColor] = useState('neutral'); // success, dange
           backgroundColor: "#f5f5f5",
         }}
       >
+        <FormControl fullWidth required>
+  <Singledropdown
+    label="Discipline"
+    menuItems={[
+      { label: "Computer Science", value: "Computer Science" },
+      { label: "Artificial intelligence", value: "Artificial Intelligence" },
+      { label: "Cyber Security", value: "Cyber Security" },
+      { label: "Gaming and Animation", value: "Gaming and Animation" },
+      { label: "Data Science", value: "Data Science" },
+    ]}
+    value={batchData.Discipline} // Controlled value
+    onChange={(selectedValue) => {
+      setBatchData({ ...batchData, Discipline: selectedValue });
+    }}
+  />
+</FormControl>
+
         <FormControl fullWidth required>
   <Singledropdown
     label="Year"

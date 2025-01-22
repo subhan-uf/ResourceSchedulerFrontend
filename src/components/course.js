@@ -24,7 +24,8 @@ function Course() {
   const [courseData, setCourseData] = useState({
     Course_code: "",
     Course_name: "",
-    Batch_ID: "",             // must store an integer PK
+    Batch_ID: "",
+    Discipline: "",             // must store an integer PK
     Max_classes_per_day: "",
     Credit_hours: "",
     Course_desc: "",
@@ -81,6 +82,7 @@ function Course() {
   const tableHeadings = [
     "Course Code",
     "Course Name",
+    "Discipline",
     "Batch",
     "Max Classes per Day",
     "Credit Hours",
@@ -99,6 +101,7 @@ function Course() {
     return [
       course.Course_code,
       course.Course_name,
+      foundBatch ? foundBatch.Discipline : "N/A",
       foundBatch ? foundBatch.Batch_name : "N/A",
       course.Max_classes_per_day,
       course.Credit_hours,
@@ -121,11 +124,12 @@ function Course() {
       const resp = await CourseService.getCourseById(courseId);
       const foundCourse = resp.data; 
       // e.g. { Course_code, Course_name, Batch_ID, Max_classes_per_day, Credit_hours, Course_desc }
-
+      const foundBatch = batches.find((b) => b.Batch_ID === foundCourse.Batch_ID);
       setCourseData({
         Course_code: foundCourse.Course_code || "",
         Course_name: foundCourse.Course_name || "",
         Batch_ID: foundCourse.Batch_ID || "",   // store the integer PK
+        Discipline: foundBatch?.Discipline || "",
         Max_classes_per_day: foundCourse.Max_classes_per_day?.toString() || "",
         Credit_hours: foundCourse.Credit_hours?.toString() || "",
         Course_desc: foundCourse.Course_desc || "",
@@ -326,14 +330,36 @@ function Course() {
   />
 </FormControl>
 
+
         </FormControl>
+
+        <FormControl fullWidth required>
+  <Singledropdown
+    label="Discipline"
+    menuItems={[
+      { label: "Computer Science", value: "Computer Science" },
+      { label: "Artificial Intelligence", value: "Artificial Intelligence" },
+      { label: "Cyber Security", value: "Cyber Security" },
+      { label: "Gaming and Animation", value: "Gaming and Animation" },
+      { label: "Data Science", value: "Data Science" },
+    ]}
+    value={courseData.Discipline} // Controlled value
+    onChange={(selectedValue) => {
+      // Update discipline and reset batch
+      setCourseData({ ...courseData, Discipline: selectedValue, Batch_ID: "" });
+    }}
+  />
+</FormControl>
+
         <FormControl fullWidth required>
   <Singledropdown
     label="Batch"
-    menuItems={batches.map((b) => ({
-      label: b.Batch_name, // Displayed in the dropdown
-      value: b.Batch_ID,   // Actual value sent to the backend
-    }))}
+    menuItems={batches
+      .filter((b) => b.Discipline === courseData.Discipline) // Filter batches by selected discipline
+      .map((b) => ({
+        label: b.Batch_name, // Displayed in the dropdown
+        value: b.Batch_ID,   // Actual value sent to the backend
+      }))}
     value={courseData.Batch_ID}
     onChange={(selectedValue) => {
       // Log for debugging

@@ -76,6 +76,8 @@ function Teacher() {
   const [filteredCourses, setFilteredCourses] = useState([]);
   const [labCourses, setLabCourses] = useState([]);
   const [theoryCourses, setTheoryCourses] = useState([]);
+  const [selectedDisciplines, setSelectedDisciplines] = useState([]); // Array of selected disciplines
+  const [filteredBatches, setFilteredBatches] = useState([]);
 
   // user can pick multiple lab courses, multiple theory courses
   const [selectedLabCourses, setSelectedLabCourses] = useState([]);
@@ -130,6 +132,14 @@ function Teacher() {
   // filter courses that belong to those batches,
   // then separate them into lab vs. theory
   // ------------------------------------
+  useEffect(() => {
+    const filtered = selectedDisciplines.length
+      ? batches.filter((b) => selectedDisciplines.includes(b.Discipline))
+      : batches; // If no discipline selected, show all batches
+    setFilteredBatches(filtered);
+  }, [selectedDisciplines, batches]);
+
+
   useEffect(() => {
     const filtered = allCourses.filter((course) =>
       selectedBatches.includes(course.Batch_ID) // course belongs to one of the selected Batch_IDs
@@ -207,6 +217,12 @@ function Teacher() {
         ...new Set(teacherBCTAs.map((a) => a.Batch_ID)),
       ];
 
+      const disciplinesFromBatches = [...new Set(
+        uniqueBatchIDs.map((batchId) => {
+          const batch = batches.find((b) => b.Batch_ID === batchId);
+          return batch?.Discipline;
+        })
+      )].filter((discipline) => discipline); 
       // fill the form data
       setFormData({
         Teacher_ID: foundTeacher.Teacher_ID?.toString() || "",
@@ -218,6 +234,7 @@ function Teacher() {
         Health_limitation: foundTeacher.Health_limitation || "",
         Seniority: foundTeacher.Seniority || "",
         Teacher_type: foundTeacher.Teacher_type || "",
+        Disciplines: disciplinesFromBatches||"",
       });
 
       setSelectedBatches(uniqueBatchIDs); // e.g. [1,2]
@@ -543,12 +560,28 @@ function Teacher() {
             ]}
             required
           />
+          <FormControl fullWidth>
+  <Dropdown
+    heading="Select Disciplines (Multiple)"
+    menuItems={[
+      { label: "Computer Science", value: "Computer Science" },
+      { label: "Artificial Intelligence", value: "Artificial Intelligence" },
+      { label: "Cyber Security", value: "Cyber Security" },
+      { label: "Gaming and Animation", value: "Gaming and Animation" },
+      { label: "Data Science", value: "Data Science" },
+    ]}
+    value={selectedDisciplines}
+    onChange={(newValues) => setSelectedDisciplines(newValues)}
+    multiple
+  />
+</FormControl>
+
 
           {/* MULTI-SELECT BATCHES */}
           <FormControl fullWidth>
             <Dropdown
               heading="Select Batches (Multiple)"
-              menuItems={batches.map((b) => ({
+              menuItems={filteredBatches.map((b) => ({
                 label: b.Batch_name,
                 value: b.Batch_ID,
               }))}
