@@ -15,6 +15,7 @@ import teacherCourseAssignmentService from "./api/teacherCourseAssignmentService
 import batchCourseTeacherAssignmentService from "./api/batchCourseTeacherAssignmentService";
 import courseService from "./api/courseService";
 import batchService from "./api/batchService";
+import sectionService from "./api/sectionService";
 
 function Teacher() {
   // ------------------------------------
@@ -68,6 +69,10 @@ function Teacher() {
 
   // **Multiple** batches for this teacher
   const [selectedBatches, setSelectedBatches] = useState([]); // array of batch IDs
+  // Add state for selected sections and filtered sections
+const [selectedSections, setSelectedSections] = useState([]); // array of section IDs
+const [filteredSections, setFilteredSections] = useState([]);
+const [sections, setSections] = useState([]); // all sections from the API
 
   // We'll load **all** courses from the server, but we'll only show the subset
   // that belongs to the selected batches. We'll store them in filteredCourses,
@@ -92,6 +97,26 @@ function Teacher() {
   // ------------------------------------
   // LOAD TEACHERS, BATCHES, COURSES
   // ------------------------------------
+  useEffect(() => {
+    async function fetchSections() {
+      try {
+        const resp = await sectionService.getAllSections();
+        setSections(resp.data);
+      } catch (error) {
+        console.error("Error fetching sections:", error);
+      }
+    }
+    fetchSections();
+  }, []);
+  
+  useEffect(() => {
+    setSelectedBatches([]);
+    setSelectedSections([]);
+    setSelectedLabCourses([]);
+    setSelectedTheoryCourses([]);
+  }, [selectedDisciplines]);
+  
+
   useEffect(() => {
     fetchTeachers();
     fetchAllBatches();
@@ -135,9 +160,37 @@ function Teacher() {
   useEffect(() => {
     const filtered = selectedDisciplines.length
       ? batches.filter((b) => selectedDisciplines.includes(b.Discipline))
-      : batches; // If no discipline selected, show all batches
-    setFilteredBatches(filtered);
+      : [];  // If no discipline selected, show nothing
+    const formatted = filtered.map((b) => ({
+      label: `${b.Batch_name}`,
+      value: b.Batch_ID,
+    }));
+    console.log(filtered)
+    setFilteredBatches(formatted);
   }, [selectedDisciplines, batches]);
+
+  useEffect(() => {
+    // Filter the separately fetched sections whose Batch_ID is in the selectedBatches.
+    const matchingSections = sections.filter((section) =>
+      selectedBatches.includes(section.Batch_ID)
+    );
+    // Format each section by finding its parent batch (to get discipline and batch name)
+    const formattedSections = matchingSections.map((section) => {
+      const batch = batches.find((b) => b.Batch_ID === section.Batch_ID);
+      return batch
+        ? {
+            label: `${batch.Batch_name}-${section.Section_name}`,
+            value: section.Section_ID,
+          }
+        : null;
+    }).filter((item) => item !== null);
+    
+    console.log("Filtered Sections:", formattedSections); // Debug log
+    setFilteredSections(formattedSections);
+  }, [selectedBatches, sections, batches]);
+  
+  
+  
 
 
   useEffect(() => {
@@ -216,7 +269,9 @@ function Teacher() {
       const uniqueBatchIDs = [
         ...new Set(teacherBCTAs.map((a) => a.Batch_ID)),
       ];
-
+      const uniqueSectionIDs = [
+        ...new Set(teacherBCTAs.map((a) => a.Section)),
+      ];
       const disciplinesFromBatches = [...new Set(
         uniqueBatchIDs.map((batchId) => {
           const batch = batches.find((b) => b.Batch_ID === batchId);
@@ -236,8 +291,9 @@ function Teacher() {
         Teacher_type: foundTeacher.Teacher_type || "",
         Disciplines: disciplinesFromBatches||"",
       });
-
+     
       setSelectedBatches(uniqueBatchIDs); // e.g. [1,2]
+      setSelectedSections(uniqueSectionIDs);
       setSelectedLabCourses(labIds);       // e.g. [5,6]
       setSelectedTheoryCourses(theoryIds); // e.g. [3]
 
@@ -374,30 +430,40 @@ function Teacher() {
       // 4) RE-CREATE BCTA
       // for each selected batch => for each selected lab course => create BCTA w/ Course_type="lab"
       // for each selected batch => for each selected theory course => create BCTA w/ Course_type="theory"
-      for (const batchId of selectedBatches) {
-        // Lab
-        for (const cid of selectedLabCourses) {
-          const bctaPayload = {
-            Assignment_ID: Math.floor(Math.random() * 100000),
-            Batch_ID: parseInt(batchId, 10),
-            Course_ID: cid,
-            Teacher_ID: teacherPayload.Teacher_ID,
-            Course_type: "lab",
-          };
-          await batchCourseTeacherAssignmentService.createAssignment(bctaPayload);
-        }
-        // Theory
-        for (const cid of selectedTheoryCourses) {
-          const bctaPayload = {
-            Assignment_ID: Math.floor(Math.random() * 100000),
-            Batch_ID: parseInt(batchId, 10),
-            Course_ID: cid,
-            Teacher_ID: teacherPayload.Teacher_ID,
-            Course_type: "theory",
-          };
-          await batchCourseTeacherAssignmentService.createAssignment(bctaPayload);
-        }
-      }
+      // 4) RE-CREATE BCTA
+// Instead of iterating over selectedBatches, iterate over selectedSections
+for (const sectionId of selectedSections) {
+  // Find the section object so we can get its Batch_ID.
+  const sectionObj = sections.find((s) => s.Section_ID === sectionId);
+  if (!sectionObj) continue; // safety check
+
+  // Create assignments for lab courses for this section
+  for (const cid of selectedLabCourses) {
+    const bctaPayload = {
+      Assignment_ID: Math.floor(Math.random() * 100000),
+      Batch_ID: parseInt(sectionObj.Batch_ID, 10),
+      Section: sectionId, // include the section ID
+      Course_ID: cid,
+      Teacher_ID: teacherPayload.Teacher_ID,
+      Course_type: "lab",
+    };
+    await batchCourseTeacherAssignmentService.createAssignment(bctaPayload);
+  }
+  
+  // Create assignments for theory courses for this section
+  for (const cid of selectedTheoryCourses) {
+    const bctaPayload = {
+      Assignment_ID: Math.floor(Math.random() * 100000),
+      Batch_ID: parseInt(sectionObj.Batch_ID, 10),
+      Section: sectionId, // include the section ID
+      Course_ID: cid,
+      Teacher_ID: teacherPayload.Teacher_ID,
+      Course_type: "theory",
+    };
+    await batchCourseTeacherAssignmentService.createAssignment(bctaPayload);
+  }
+}
+
 
       fetchTeachers();
       resetForm();
@@ -477,7 +543,7 @@ function Teacher() {
           <TextField
             label="Teacher ID (PK)"
             variant="outlined"
-            type="number"
+            type="text"
             name="Teacher_ID"
             fullWidth
             required
@@ -494,16 +560,19 @@ function Teacher() {
             value={formData.Name}
             onChange={handleInputChange}
           />
-          <TextField
-            label="NIC"
-            variant="outlined"
-            type="text"
-            name="NIC"
-            fullWidth
-            required
-            value={formData.NIC}
-            onChange={handleInputChange}
-          />
+         <TextField
+  label="NIC"
+  variant="outlined"
+  type="text"
+  name="NIC"
+  fullWidth
+  required
+  value={formData.NIC}
+  onChange={handleInputChange}
+  inputProps={{ maxLength: 13, pattern: "[0-9]{13}" }}
+  helperText="NIC must be exactly 13 digits"
+/>
+
           <TextField
             label="Email"
             variant="outlined"
@@ -515,15 +584,18 @@ function Teacher() {
             onChange={handleInputChange}
           />
           <TextField
-            label="Phone"
-            variant="outlined"
-            type="text"
-            name="Phone"
-            fullWidth
-            required
-            value={formData.Phone}
-            onChange={handleInputChange}
-          />
+  label="Phone"
+  variant="outlined"
+  type="text"
+  name="Phone"
+  fullWidth
+  required
+  value={formData.Phone}
+  onChange={handleInputChange}
+  inputProps={{ maxLength: 11, pattern: "[0-9]{11}" }}
+  helperText="Phone number must be exactly 11 digits"
+/>
+
           <TextField
             label="Max Classes"
             variant="outlined"
@@ -548,9 +620,13 @@ function Teacher() {
           <Singledropdown
             label="Teacher Seniority"
             value={formData.Seniority}
-            onChange={(val) =>
-              setFormData((prev) => ({ ...prev, Seniority: val }))
-            }
+            onChange={(newValues) => {
+              setSelectedDisciplines(newValues);
+              // Clear batches and sections when discipline changes
+              setSelectedBatches([]);
+              setSelectedSections([]);
+            }}
+            
             menuItems={[
               { label: "Chairman", value: "Chairman" },
               { label: "Professor", value: "Professor" },
@@ -581,15 +657,21 @@ function Teacher() {
           <FormControl fullWidth>
             <Dropdown
               heading="Select Batches (Multiple)"
-              menuItems={filteredBatches.map((b) => ({
-                label: b.Batch_name,
-                value: b.Batch_ID,
-              }))}
+              menuItems={filteredBatches}
               value={selectedBatches}
               onChange={(newValues) => setSelectedBatches(newValues)}
               multiple
             />
           </FormControl>
+          <FormControl fullWidth>
+  <Dropdown
+    heading="Select Sections (Multiple)"
+    menuItems={filteredSections} // Only sections from the selected batches
+    value={selectedSections}
+    onChange={(newValues) => setSelectedSections(newValues)}
+    multiple
+  />
+</FormControl>
 
           {/* MULTI-SELECT LAB COURSES */}
           <FormControl fullWidth>

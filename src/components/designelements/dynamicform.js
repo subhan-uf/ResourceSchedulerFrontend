@@ -119,7 +119,7 @@ function DynamicForm({
                       onChange={(e) => handleFieldChange(section.id, name, e.target.checked)}
                       sx={{ marginRight: 1 }}
                     />
-                    <Typography>{label}</Typography>
+                    {/* <Typography>{label}</Typography> */}
                   </Box>
                 );
 

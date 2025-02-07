@@ -270,7 +270,7 @@ const [snackbarColor, setSnackbarColor] = useState('neutral'); // success, dange
     { componentType: "TextField", label: "Max Class Gaps per Day", name: "Max_gaps", type: "number" },
   ];
   
-  const getSectionTitle = (index) => `Section ${String.fromCharCode(65 + index)}`;
+  const getSectionTitle = (index) => ``;
   
 
   // -----------------------------
@@ -338,13 +338,29 @@ const [snackbarColor, setSnackbarColor] = useState('neutral'); // success, dange
     ]}
     value={batchData.Year} // Controlled value
     onChange={(selectedValue) => {
-      // Update year and auto-generate Batch_name
+      // Get current discipline
+      const discipline = batchData.Discipline;
+      // Determine the prefix based on discipline
+      let prefix = "Batch";
+      if (discipline === "Artificial Intelligence" || discipline === "Artificial intelligence") {
+        prefix = "BSAI";
+      } else if (discipline === "Cyber Security") {
+        prefix = "BSCR";
+      } else if (discipline === "Data Science") {
+        prefix = "BSDT";
+      } else if (discipline === "Computer Science") {
+        prefix = "BSCS";
+      } else if (discipline === "Gaming and Animation") {
+        prefix = "BSGA";
+      }
+      // Update year and auto-generate Batch_name with the prefix
       setBatchData({
         ...batchData,
         Year: selectedValue,
-        Batch_name: `Batch ${selectedValue}`, // Automatically generate the batch name
+        Batch_name: `${prefix} Batch ${selectedValue}`,
       });
     }}
+    
   />
 </FormControl>
         <TextField
