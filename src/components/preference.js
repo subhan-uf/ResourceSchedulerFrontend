@@ -181,19 +181,30 @@ function Preference() {
       );
       const coursesForTeacher = [];
       teacherTCAs.forEach((tca) => {
-        const cid = tca.Course_ID;
-        if (!coursesForTeacher.some((c) => c.courseID === cid.toString())) {
-          const courseObj = courses.find(
-            (c) => c.Course_ID.toString() === cid.toString()
-          );
+        const cid = tca.Course_ID.toString();
+        const courseObj = courses.find(
+          (c) => c.Course_ID.toString() === cid
+        );
+        
+        const existingCourse = coursesForTeacher.find((c) => c.courseID === cid);
+        if (existingCourse) {
+          // Update the properties if this tca indicates a new capability.
+          if (tca.Teacher_type.toLowerCase() === "lab") {
+            existingCourse.canLab = true;
+          } else if (tca.Teacher_type.toLowerCase() === "theory") {
+            existingCourse.canTheory = true;
+          }
+        } else {
+          // Add a new entry.
           coursesForTeacher.push({
-            courseID: cid.toString(),
+            courseID: cid,
             courseName: courseObj ? courseObj.Course_name : `Unknown(${cid})`,
             canLab: tca.Teacher_type.toLowerCase() === "lab",
             canTheory: tca.Teacher_type.toLowerCase() === "theory",
           });
         }
       });
+      
       setTeacherCourses(coursesForTeacher);
 
       // Next: Fetch BatchCourseTeacherAssignment records for this teacher using string comparison

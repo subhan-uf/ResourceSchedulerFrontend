@@ -97,6 +97,26 @@ const [sections, setSections] = useState([]); // all sections from the API
   // ------------------------------------
   // LOAD TEACHERS, BATCHES, COURSES
   // ------------------------------------
+  // useEffect(() => {
+  //   setSelectedSections((prevSelected) =>
+  //     prevSelected.filter((sectionId) =>
+  //       filteredSections.some((s) => s.value === sectionId)
+  //     )
+  //   );
+  // }, [filteredSections]);
+  useEffect(() => {
+    // When the batches change (due to discipline change), then clear sections.
+    setSelectedSections([]);
+  }, [selectedBatches]);
+  
+  
+  useEffect(() => {
+    setSelectedBatches([]);
+    setSelectedSections([]);
+  }, [selectedDisciplines]);
+  
+  
+  
   useEffect(() => {
     async function fetchSections() {
       try {
@@ -110,11 +130,14 @@ const [sections, setSections] = useState([]); // all sections from the API
   }, []);
   
   useEffect(() => {
-    setSelectedBatches([]);
-    setSelectedSections([]);
-    setSelectedLabCourses([]);
-    setSelectedTheoryCourses([]);
-  }, [selectedDisciplines]);
+    if (!isEditing) {
+      setSelectedBatches([]);
+      setSelectedSections([]);
+      setSelectedLabCourses([]);
+      setSelectedTheoryCourses([]);
+    }
+  }, [selectedDisciplines, isEditing]);
+  
   
 
   useEffect(() => {
@@ -291,11 +314,12 @@ const [sections, setSections] = useState([]); // all sections from the API
         Teacher_type: foundTeacher.Teacher_type || "",
         Disciplines: disciplinesFromBatches||"",
       });
-     
+      setSelectedDisciplines(disciplinesFromBatches);
       setSelectedBatches(uniqueBatchIDs); // e.g. [1,2]
       setSelectedSections(uniqueSectionIDs);
       setSelectedLabCourses(labIds);       // e.g. [5,6]
       setSelectedTheoryCourses(theoryIds); // e.g. [3]
+      
 
       setIsEditing(true);
       setEditingTeacherId(teacherId);
@@ -618,24 +642,21 @@ for (const sectionId of selectedSections) {
 
           {/* Seniority */}
           <Singledropdown
-            label="Teacher Seniority"
-            value={formData.Seniority}
-            onChange={(newValues) => {
-              setSelectedDisciplines(newValues);
-              // Clear batches and sections when discipline changes
-              setSelectedBatches([]);
-              setSelectedSections([]);
-            }}
-            
-            menuItems={[
-              { label: "Chairman", value: "Chairman" },
-              { label: "Professor", value: "Professor" },
-              { label: "Assistant Professor", value: "Assistant Professor" },
-              { label: "Lecturer", value: "Lecturer" },
-              { label: "Visiting Faculty", value: "Visiting Faculty" },
-            ]}
-            required
-          />
+  label="Teacher Seniority"
+  value={formData.Seniority}
+  onChange={(selectedValue) => {
+    setFormData((prev) => ({ ...prev, Seniority: selectedValue }));
+  }}
+  menuItems={[
+    { label: "Chairman", value: "Chairman" },
+    { label: "Professor", value: "Professor" },
+    { label: "Assistant Professor", value: "Assistant Professor" },
+    { label: "Lecturer", value: "Lecturer" },
+    { label: "Visiting Faculty", value: "Visiting Faculty" },
+  ]}
+  required
+/>
+
           <FormControl fullWidth>
   <Dropdown
     heading="Select Disciplines (Multiple)"

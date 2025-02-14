@@ -1,6 +1,6 @@
 import apiClient from './apiClient';
 
-const roomPreferenceService = {
+const coursePreferenceService = {
   getAll: () => apiClient.get('/course-preference-constraints/'),
   getById: (id) => apiClient.get(`/course-preference-constraints/${id}/`),
   create: (data) => apiClient.post('/course-preference-constraints/', data),
@@ -8,4 +8,4 @@ const roomPreferenceService = {
   delete: (id) => apiClient.delete(`/course-preference-constraints/${id}/`),
 };
 
-export default roomPreferenceService;
+export default coursePreferenceService;

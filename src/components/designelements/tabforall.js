@@ -100,7 +100,9 @@ export default function TabsTeachers({
           backgroundColor: '#f9f9f9',
         }}
       >
-        {tabContent[currentIndex]}
+        {typeof tabContent[currentIndex] === 'function'
+          ? tabContent[currentIndex]()
+          : tabContent[currentIndex]}
       </Box>
     </Box>
   );
