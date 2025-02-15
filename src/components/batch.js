@@ -204,28 +204,53 @@ const [snackbarColor, setSnackbarColor] = useState('neutral'); // success, dange
   const handleSubmit = async () => {
     try {
       if (isEditing && editingBatchId) {
-        // Update
+        // 1) Update the batch itself.
         await BatchService.updateBatch(editingBatchId, batchData);
-
-        // Delete old sections
+      
+        // 2) Get the current (old) sections from the API for this batch.
         const oldSecs = allSections.filter((sec) => sec.Batch_ID === editingBatchId);
-        for (const sec of oldSecs) {
-          await SectionService.deleteSection(sec.Section_ID);
-        }
-
-        // Create new sections
+        // We'll use the list of IDs of old sections for deletion later.
+        const oldSectionIds = oldSecs.map((sec) => sec.Section_ID);
+      
+        // 3) Process each section from the form.
+        //    If the section has an 'id' and it matches an old section, update it.
+        //    Otherwise, create a new section.
+        const currentSectionIds = []; // to store ids of sections that should remain
         for (const sec of sections) {
           const sectionData = {
             ...sec.values,
             Batch_ID: editingBatchId,
           };
-          await SectionService.createSection(sectionData);
+      
+          if (sec.id && oldSectionIds.includes(sec.id)) {
+            // Section exists in the database; update it.
+            await SectionService.updateSection(sec.id, sectionData);
+            currentSectionIds.push(sec.id);
+          } else {
+            // New section: create it.
+            const createResp = await SectionService.createSection(sectionData);
+            // Assume the created section returns its new ID as 'Section_ID'
+            const newId = createResp.data.Section_ID || createResp.data.id;
+            if (newId) {
+              currentSectionIds.push(newId);
+            }
+          }
         }
-
-        setSnackbarMessage('Batch and section successfully updated.');
-      setSnackbarColor('success');
-      setSnackbarOpen(true);
-      } else {
+      
+        // 4) Delete any old sections that were removed from the form.
+        for (const sec of oldSecs) {
+          if (!currentSectionIds.includes(sec.Section_ID)) {
+            await SectionService.deleteSection(sec.Section_ID);
+          }
+        }
+      
+        setSnackbarMessage('Batch and sections successfully updated.');
+        setSnackbarColor('success');
+        setSnackbarOpen(true);
+      }
+      
+      
+       else {
         // Create
         const batchResp = await BatchService.createBatch(batchData);
         const newBatchId = batchResp.data.id ?? batchResp.data.Batch_ID;

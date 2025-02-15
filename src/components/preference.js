@@ -633,8 +633,54 @@ function Preference() {
       componentType: "SingleDropdown",
       label: "End time",
       name: "endTime",
-      options: ["09:20", "10:10", "11:30", "12:20", "02:00", "02:50", "03:40", "04:30"],
+      // Dynamically compute options based on the selected start time.
+      // The dropdown remains empty (or shows no options) until a start time is selected.
+      options: (() => {
+        // Define the available start times and corresponding end times.
+        // Adjust these arrays so they reflect your actual schedule and breaks.
+        const startTimes = ["08:30", "09:20", "10:10", "11:30", "12:20", "02:00", "02:50", "03:40"];
+        const endTimes   = ["09:20", "10:10", "11:00", "12:20", "01:10", "02:50", "03:40", "04:30"];
+        
+        // Get the selected start time from the first preference (if any)
+        const start = (timePreferences.length > 0 && timePreferences[0].values.startTime) || "";
+        if (!start) return []; // no start time selected: return an empty array
+        
+        const idx = startTimes.indexOf(start);
+        if (idx === -1) return [];
+        
+        // Define your rule:
+        // - The available end time options should be the immediate next slot,
+        //   and (if applicable) the one after that unless a break occurs.
+        // For example, if start is "08:30" (index 0), then available end times are "09:20" and "10:10".
+        // But if start is "10:10" (index 2) and a break is in effect (e.g. 11:00–11:30), then only allow the immediate next.
+        
+        // (You can adjust the following logic as needed.)
+        let options = [];
+        
+        // If the selected start time is "10:10", only allow the next slot.
+        if (start === "10:10") {
+          if (idx + 1 < endTimes.length) {
+            options.push(endTimes[idx ]);
+          }
+        } else if (start === "12:20") {
+          if (idx + 1 < endTimes.length) {
+            options.push(endTimes[idx ]);
+          }
+        }
+        else {
+          // Otherwise, allow the next one or two slots (if available).
+          if (idx + 1 < endTimes.length) {
+            options.push(endTimes[idx ]);
+          }
+          if (idx + 2 < endTimes.length) {
+            options.push(endTimes[idx + 1]);
+          }
+        }
+        
+        return options;
+      })(),
     },
+    
     {
       componentType: "Checkbox",
       label: "Hard Time Constraint",

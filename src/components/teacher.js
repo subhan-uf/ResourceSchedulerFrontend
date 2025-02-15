@@ -104,17 +104,44 @@ const [sections, setSections] = useState([]); // all sections from the API
   //     )
   //   );
   // }, [filteredSections]);
-  useEffect(() => {
-    // When the batches change (due to discipline change), then clear sections.
-    setSelectedSections([]);
-  }, [selectedBatches]);
+  // useEffect(() => {
+  //   // When the batches change (due to discipline change), then clear sections.
+  //   setSelectedSections([]);
+  // }, [selectedBatches]);
   
   
-  useEffect(() => {
-    setSelectedBatches([]);
-    setSelectedSections([]);
-  }, [selectedDisciplines]);
-  
+  // useEffect(() => {
+  //   setSelectedBatches([]);
+  //   setSelectedSections([]);
+  // }, [selectedDisciplines]);
+  // Filter selected batches when filteredBatches changes
+useEffect(() => {
+  setSelectedBatches(prev => 
+    prev.filter(batchId => 
+      filteredBatches.some(b => b.value === batchId)
+  ));
+}, [filteredBatches]);
+
+// Filter selected sections when filteredSections changes
+useEffect(() => {
+  setSelectedSections(prev => 
+    prev.filter(sectionId => 
+      filteredSections.some(s => s.value === sectionId)
+  ));
+}, [filteredSections]);
+
+// Filter selected courses when lab/theory courses change
+useEffect(() => {
+  const validLab = selectedLabCourses.filter(cid => 
+    labCourses.some(c => c.Course_ID === cid)
+  );
+  setSelectedLabCourses(validLab);
+
+  const validTheory = selectedTheoryCourses.filter(cid => 
+    theoryCourses.some(c => c.Course_ID === cid)
+  );
+  setSelectedTheoryCourses(validTheory);
+}, [labCourses, theoryCourses]);
   
   
   useEffect(() => {
@@ -135,8 +162,9 @@ const [sections, setSections] = useState([]); // all sections from the API
       setSelectedSections([]);
       setSelectedLabCourses([]);
       setSelectedTheoryCourses([]);
+      setSelectedDisciplines([]); // Also reset disciplines if needed
     }
-  }, [selectedDisciplines, isEditing]);
+  }, [isEditing]);
   
   
 
@@ -180,37 +208,30 @@ const [sections, setSections] = useState([]); // all sections from the API
   // filter courses that belong to those batches,
   // then separate them into lab vs. theory
   // ------------------------------------
-  useEffect(() => {
-    const filtered = selectedDisciplines.length
-      ? batches.filter((b) => selectedDisciplines.includes(b.Discipline))
-      : [];  // If no discipline selected, show nothing
-    const formatted = filtered.map((b) => ({
-      label: `${b.Batch_name}`,
-      value: b.Batch_ID,
-    }));
-    console.log(filtered)
-    setFilteredBatches(formatted);
-  }, [selectedDisciplines, batches]);
+useEffect(() => {
+  const filtered = selectedDisciplines.length
+    ? batches.filter((b) => selectedDisciplines.includes(b.Discipline))
+    : [];
+  const formatted = filtered.map((b) => ({
+    label: `${b.Batch_name}`,
+    value: b.Batch_ID,
+  }));
+  setFilteredBatches(formatted);
+}, [selectedDisciplines, batches]);
 
-  useEffect(() => {
-    // Filter the separately fetched sections whose Batch_ID is in the selectedBatches.
-    const matchingSections = sections.filter((section) =>
-      selectedBatches.includes(section.Batch_ID)
-    );
-    // Format each section by finding its parent batch (to get discipline and batch name)
-    const formattedSections = matchingSections.map((section) => {
-      const batch = batches.find((b) => b.Batch_ID === section.Batch_ID);
-      return batch
-        ? {
-            label: `${batch.Batch_name}-${section.Section_name}`,
-            value: section.Section_ID,
-          }
-        : null;
-    }).filter((item) => item !== null);
-    
-    console.log("Filtered Sections:", formattedSections); // Debug log
-    setFilteredSections(formattedSections);
-  }, [selectedBatches, sections, batches]);
+useEffect(() => {
+  const matchingSections = sections.filter((section) =>
+    selectedBatches.includes(section.Batch_ID)
+  );
+  const formattedSections = matchingSections.map((section) => {
+    const batch = batches.find((b) => b.Batch_ID === section.Batch_ID);
+    return batch ? { 
+      label: `${batch.Batch_name}-${section.Section_name}`,
+      value: section.Section_ID,
+    } : null;
+  }).filter(Boolean);
+  setFilteredSections(formattedSections);
+}, [selectedBatches, sections, batches]);
   
   
   

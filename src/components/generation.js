@@ -24,18 +24,19 @@ const normalizeTime = (timeStr) => {
   const second = (parts[2] || "00").padStart(2, "0");
   return `${hour}:${minute}:${second}`;
 };
+
 const adjustEndTime = (startStr, endStr) => {
-    const start = normalizeTime(startStr);
-    let end = normalizeTime(endStr);
-    const [startHour] = start.split(":").map(Number);
-    let [endHour, endMin, endSec] = end.split(":").map(Number);
-    // If end hour is less than start hour, assume it's PM and add 12 hours.
-    if (endHour < startHour) {
-      endHour += 12;
-    }
-    return `${String(endHour).padStart(2, "0")}:${String(endMin).padStart(2, "0")}:${String(endSec).padStart(2, "0")}`;
-  };
-  
+  const start = normalizeTime(startStr);
+  let end = normalizeTime(endStr);
+  const [startHour] = start.split(":").map(Number);
+  let [endHour, endMin, endSec] = end.split(":").map(Number);
+  // If end hour is less than start hour, assume it's PM and add 12 hours.
+  if (endHour < startHour) {
+    endHour += 12;
+  }
+  return `${String(endHour).padStart(2, "0")}:${String(endMin).padStart(2, "0")}:${String(endSec).padStart(2, "0")}`;
+};
+
 function Generation() {
   // State for fetched data
   const [teachers, setTeachers] = useState([]);
@@ -80,8 +81,8 @@ function Generation() {
 
         console.log("Fetched Teachers:", teachRes.data);
         console.log("Fetched Rooms:", roomRes.data);
-        console.log("Fetched Sections:", sectionRes.data); // Check these keys!
-        console.log("Fetched Batches:", batchRes.data);     // Check these keys!
+        console.log("Fetched Sections:", sectionRes.data);
+        console.log("Fetched Batches:", batchRes.data);
         console.log("Fetched Courses:", courseRes.data);
         console.log("Fetched TCA:", tcaRes.data);
         console.log("Fetched BCTA:", bctaRes.data);
@@ -95,8 +96,8 @@ function Generation() {
         setLabRooms(
           roomRes.data.filter((r) => r.Room_type.toLowerCase() === "lab")
         );
-        setSections(sectionRes.data || []); // Verify property names (maybe use s.id?)
-        setBatches(batchRes.data || []);      // Verify property names (maybe use b.id?)
+        setSections(sectionRes.data || []);
+        setBatches(batchRes.data || []);
         setCourses(courseRes.data || []);
         setTcaList(tcaRes.data || []);
         setBctaList(bctaRes.data || []);
@@ -123,9 +124,7 @@ function Generation() {
   const mapTeacherAssignments = () => {
     const teacherAssignments = {};
     teachers.forEach((teacher) => {
-        const tid = teacher.Teacher_ID ? String(teacher.Teacher_ID) : (teacher.id ? String(teacher.id) : '');
-
-      console.log("TODDDDDD",tid);
+      const tid = teacher.Teacher_ID ? String(teacher.Teacher_ID) : (teacher.id ? String(teacher.id) : '');
       teacherAssignments[tid] = {
         id: tid,
         name: teacher.Name,
@@ -137,89 +136,99 @@ function Generation() {
       };
     });
     tcaList.forEach((tca) => {
-        const teacherObj = tca.Teacher_ID;
-        const courseObj = tca.Course_ID;
-        if (!teacherObj || !courseObj) return;
-        const tid = teacherObj && teacherObj.Teacher_ID ? String(teacherObj.Teacher_ID) : String(teacherObj);
-        const matchedCourse = courses.find(
-          (c) => String(c.Course_ID) === String(courseObj)
-        );
-        let discipline = "Unknown";
-let batchId = null;
-let sectionId = null;
-if (matchedCourse) {
-  let batchObj = null;
-  if (typeof matchedCourse.Batch_ID === "object") {
-    batchObj = matchedCourse.Batch_ID;
-  } else {
-    batchObj = batches.find(
-      (b) => String(b.Batch_ID) === String(matchedCourse.Batch_ID)
-    );
-  }
-  if (batchObj) {
-    discipline = batchObj.Discipline;
-    batchId = batchObj.Batch_ID; // Use the actual Batch_ID
-    const matchingSection = sections.find(
-      (s) => String(s.Batch_ID) === String(batchObj.Batch_ID)
-    );
-    if (matchingSection) {
-      sectionId = matchingSection.Section_ID;
-    }
-  }
-}
-
-        if (teacherAssignments[tid]) {
-            teacherAssignments[tid].assignments.push([
-                discipline,
-                batchId,   // now using actual Batch_ID
-                sectionId,
-                courseObj.Course_name || (matchedCourse && matchedCourse.Course_name) || "Default Course",
-                tca.Teacher_type || "theory",
-              ]);
-              
+      const teacherObj = tca.Teacher_ID;
+      const courseObj = tca.Course_ID;
+      if (!teacherObj || !courseObj) return;
+      const tid = teacherObj && teacherObj.Teacher_ID ? String(teacherObj.Teacher_ID) : String(teacherObj);
+      const matchedCourse = courses.find(
+        (c) => String(c.Course_ID) === String(courseObj)
+      );
+      let discipline = "Unknown";
+      let batchId = null;
+      let sectionId = null;
+      let year = null;
+      let sectionIndex = null;
+      if (matchedCourse) {
+        let batchObj = null;
+        if (typeof matchedCourse.Batch_ID === "object") {
+          batchObj = matchedCourse.Batch_ID;
+        } else {
+          batchObj = batches.find(
+            (b) => String(b.Batch_ID) === String(matchedCourse.Batch_ID)
+          );
         }
-      });
+        if (batchObj) {
+          discipline = batchObj.Discipline;
+          batchId = batchObj.Batch_ID; // for response
+          year = batchObj.Year ? batchObj.Year - 2020 : 1;
+          const sectionsForBatch = sections.filter((s) => String(s.Batch_ID) === String(batchObj.Batch_ID));
+          const matchingSection = sectionsForBatch.find((s) => String(s.Section_ID) === String(tca.Section_ID || s.Section_ID));
+          if (matchingSection) {
+            sectionId = matchingSection.Section_ID;
+            sectionIndex = sectionsForBatch.findIndex((s) => String(s.Section_ID) === String(matchingSection.Section_ID));
+          } else if (sectionsForBatch.length > 0) {
+            sectionId = sectionsForBatch[0].Section_ID;
+            sectionIndex = 0;
+          }
+        }
+      }
+      if (teacherAssignments[tid]) {
+        teacherAssignments[tid].assignments.push([
+          discipline,
+          batchId,                  // preserved for response
+          year,                     // actual year (1, 2, etc.)
+          sectionIndex,             // section index (0, 1, etc.)
+          courseObj.Course_name || (matchedCourse && matchedCourse.Course_name) || "Default Course",
+          tca.Teacher_type || "theory",
+        ]);
+      }
+    });
       
-      bctaList.forEach((bcta) => {
-        const teacherObj = bcta.Teacher_ID;
-        const courseObj = bcta.Course_ID;
-        if (!teacherObj || !courseObj) return;
-        const tid = teacherObj && teacherObj.Teacher_ID ? String(teacherObj.Teacher_ID) : String(teacherObj);
-        const matchedCourse = courses.find(
-          (c) => String(c.Course_ID) === String(courseObj)
-        );
-        let discipline = "Unknown";
-let batchId = null;
-if (matchedCourse) {
-  let batchObj = null;
-  if (typeof matchedCourse.Batch_ID === "object") {
-    batchObj = matchedCourse.Batch_ID;
-  } else {
-    batchObj = batches.find(
-      (b) => String(b.Batch_ID) === String(matchedCourse.Batch_ID)
-    );
-  }
-  if (batchObj) {
-    discipline = batchObj.Discipline;
-    batchId = batchObj.Batch_ID;  // Use the actual Batch_ID
-  }
-}
-let sectionId = null;
-if (bcta.Section) {
-  sectionId = bcta.Section.Section_ID ? bcta.Section.Section_ID : bcta.Section;
-}
-
-        if (teacherAssignments[tid]) {
-            teacherAssignments[tid].assignments.push([
-                discipline,
-                batchId,   // now using actual Batch_ID
-                sectionId,
-                courseObj.Course_name || (matchedCourse && matchedCourse.Course_name) || "Default Course",
-                bcta.Course_type || "theory",
-              ]);
-              
+    bctaList.forEach((bcta) => {
+      const teacherObj = bcta.Teacher_ID;
+      const courseObj = bcta.Course_ID;
+      if (!teacherObj || !courseObj) return;
+      const tid = teacherObj && teacherObj.Teacher_ID ? String(teacherObj.Teacher_ID) : String(teacherObj);
+      const matchedCourse = courses.find(
+        (c) => String(c.Course_ID) === String(courseObj)
+      );
+      let discipline = "Unknown";
+      let batchId = null;
+      let year = null;
+      if (matchedCourse) {
+        let batchObj = null;
+        if (typeof matchedCourse.Batch_ID === "object") {
+          batchObj = matchedCourse.Batch_ID;
+        } else {
+          batchObj = batches.find(
+            (b) => String(b.Batch_ID) === String(matchedCourse.Batch_ID)
+          );
         }
-      });
+        if (batchObj) {
+          discipline = batchObj.Discipline;
+          batchId = batchObj.Batch_ID;  // for response
+          year = batchObj.Year ? batchObj.Year - 2020 : 1;
+        }
+      }
+      let sectionId = null;
+      let sectionIndex = null;
+      const sectionsForBatch = sections.filter((s) => String(s.Batch_ID) === String(batchId));
+      if (bcta.Section) {
+        sectionId = bcta.Section.Section_ID ? bcta.Section.Section_ID : bcta.Section;
+        sectionIndex = sectionsForBatch.findIndex((s) => String(s.Section_ID) === String(sectionId));
+        if (sectionIndex === -1) sectionIndex = 0;
+      }
+      if (teacherAssignments[tid]) {
+        teacherAssignments[tid].assignments.push([
+          discipline,
+          batchId,                  // for response
+          year,                     // actual year
+          sectionIndex,             // section index
+          courseObj.Course_name || (matchedCourse && matchedCourse.Course_name) || "Default Course",
+          bcta.Course_type || "theory",
+        ]);
+      }
+    });
       
     Object.keys(teacherAssignments).forEach((tid) => {
       const unique = [];
@@ -231,7 +240,8 @@ if (bcta.Section) {
               a[1] === assignment[1] &&
               a[2] === assignment[2] &&
               a[3] === assignment[3] &&
-              a[4] === assignment[4]
+              a[4] === assignment[4] &&
+              a[5] === assignment[5]
           )
         ) {
           unique.push(assignment);
@@ -243,12 +253,24 @@ if (bcta.Section) {
     coursePrefs.forEach((cp) => {
       const tid = String(cp.Teacher_ID?.Teacher_ID || cp.Teacher_ID);
       if (!teacherTimePrefs[tid]) teacherTimePrefs[tid] = [];
-      const start_slot_index = cp.Start_time
-        ? parseInt(cp.Start_time.split(":")[0]) - 8
-        : 0;
-      const end_slot_index = cp.End_time
-        ? parseInt(cp.End_time.split(":")[0]) - 8
-        : 0;
+      const timeslotBoundaries = [
+        "08:30:00", // slot 0 start
+        "09:20:00", // slot 1 start
+        "10:10:00", // slot 2 start
+        "11:30:00", // slot 3 start (after the 11:00-11:30 break)
+        "12:20:00", // slot 4 start
+        "02:00:00", // slot 5 start (after the 1:10-2:00 break)
+        "02:50:00", // slot 6 start
+        "03:40:00"  // slot 7 start
+      ];
+      
+      // Normalize the teacher's times:
+      const normalizedStart = normalizeTime(cp.Start_time); // e.g. "08:30:00"
+      const normalizedEnd = normalizeTime(cp.End_time);       // e.g. "09:20:00"
+      console.log(normalizedStart)
+      // Find the indices:
+      const start_slot_index = timeslotBoundaries.indexOf(normalizedStart);
+      const end_slot_index = timeslotBoundaries.indexOf(normalizedEnd) - 1;
       let courseName = "Default Course";
       if (cp.Course_ID) {
         const foundCourse = courses.find(
@@ -261,7 +283,7 @@ if (bcta.Section) {
       teacherTimePrefs[tid].push({
         course_name: courseName,
         course_type: cp.Lab_or_Theory || "theory",
-        day: cp.Day || "Mon",
+        day: cp.Day ? cp.Day.slice(0, 3) : "Mon",
         start_slot_index,
         end_slot_index,
         needs_speaker: cp.Speaker || false,
@@ -274,6 +296,7 @@ if (bcta.Section) {
     });
     return teacherAssignments;
   };
+
   const timeToMinutes = (timeStr) => {
     const [h, m, s] = timeStr.split(':').map(Number);
     return h * 60 + m;
@@ -282,7 +305,9 @@ if (bcta.Section) {
   const mapDisciplineInfo = () => {
     const disciplineInfo = {};
     batches.forEach((batch) => {
-      const key = `${batch.Discipline}, ${batch.Year ? batch.Year - 2020 : 1}`;
+      // Calculate year as provided (e.g., 1 means 1st year)
+      const year = batch.Year ? batch.Year - 2020 : 1;
+      const key = `${batch.Discipline}, ${year}`;
       const batchCourses = courses.filter((course) => {
         if (typeof course.Batch_ID === "object") {
           return course.Batch_ID.Batch_ID === batch.Batch_ID;
@@ -300,13 +325,12 @@ if (bcta.Section) {
         num_sections: batchSections.length,
         sections: batchSections.map((s) => s.Section_ID),
         courses: batchCourses.map((c) => ({
-            id: c.Course_ID,
+          id: c.Course_ID,
           name: c.Course_name,
           credit_hours: c.Credit_hours,
           is_lab: c.Is_Lab,
         })),
       };
-      
     });
     return disciplineInfo;
   };
@@ -362,7 +386,6 @@ if (bcta.Section) {
       const result = await generationService.generateTimetable(payload);
       console.log("Generation result:", result);
       setGeneratedData(result);
-    //   console.log("New generatedData state:", result);
     } catch (error) {
       console.error("Generation failed:", error);
       if (error.response) {
@@ -389,46 +412,34 @@ if (bcta.Section) {
     const daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
 
     return timeslotsOrder.map((timeSlot) => {
-      // Construct expected start time in HH:MM:SS format
       const expectedStart = normalizeTime(timeSlot.split("-")[0] + ":00");
       const formattedTime = timeSlot.replace("-", " - ");
       const rowDays = daysOfWeek.map((dayName) => {
-        // Find a slot with the exact day, normalized start time, and matching timetable ID
         const slot = details.find((d) => {
-            if (d.Day !== dayName || !d.Start_Time || !d.End_Time) return false;
-            if (String(d.Timetable_ID) !== String(header.Timetable_ID)) return false;
-            
-            const eventStart = timeToMinutes(normalizeTime(d.Start_Time));
-            const eventEnd = timeToMinutes(adjustEndTime(d.Start_Time, d.End_Time));
-            const slotStart = timeToMinutes(expectedStart);
-            // Compute slot end from timeslot order:
-            const slotEnd = timeToMinutes(adjustEndTime(timeSlot.split("-")[0] + ":00", timeSlot.split("-")[1] + ":00"));
-          
-            // Check if the event overlaps with this slot
-            return eventStart < slotEnd && eventEnd > slotStart;
-          });
-          
-        // console.log("Checking slot for", timeSlot, "on", dayName, ":", slot);
+          if (d.Day !== dayName || !d.Start_Time || !d.End_Time) return false;
+          if (String(d.Timetable_ID) !== String(header.Timetable_ID)) return false;
+          const eventStart = timeToMinutes(normalizeTime(d.Start_Time));
+          const eventEnd = timeToMinutes(adjustEndTime(d.Start_Time, d.End_Time));
+          const slotStart = timeToMinutes(expectedStart);
+          const slotEnd = timeToMinutes(adjustEndTime(timeSlot.split("-")[0] + ":00", timeSlot.split("-")[1] + ":00"));
+          return eventStart < slotEnd && eventEnd > slotStart;
+        });
         if (!slot) {
           return { text: "", color: "", teacher: "" };
         }
         const course = courses.find(
           (c) => String(c.Course_ID) === String(slot.Course_ID)
         );
-        // console.log("COURSE",course)
         const courseName = course ? course.Course_name : "Unknown Course";
         const roomObj =
-  slot.Theory_or_Lab === "lab"
-    ? labRooms.find((r) => String(r.Room_no) === String(slot.Room_ID))
-    : rooms.find((r) => String(r.Room_no) === String(slot.Room_ID));
-const room = roomObj ? roomObj.Room_no : "N/A";
-
-
-let displayText = courseName;
-if (slot.Theory_or_Lab === "lab") {
-  displayText += ` (LAB - ${room})`;
-}
-
+          slot.Theory_or_Lab === "lab"
+            ? labRooms.find((r) => String(r.Room_no) === String(slot.Room_ID))
+            : rooms.find((r) => String(r.Room_no) === String(slot.Room_ID));
+        const room = roomObj ? roomObj.Room_no : "N/A";
+        let displayText = courseName;
+        if (slot.Theory_or_Lab === "lab") {
+          displayText += ` (LAB - ${room})`;
+        }
         const teacher =
           teachers.find(
             (t) =>
@@ -491,12 +502,9 @@ if (slot.Theory_or_Lab === "lab") {
               <Box sx={{ mt: 4 }}>
                 {generatedData.timetable_headers.map((header) => {
                   console.log("Timetable header:", header);
-                  // IMPORTANT: Check if your sections array objects use "Section_ID" or a different key (like "id")
                   const sectionObj = sections.find(
                     (s) => String(s.Section_ID) === String(header.Section_ID)
                   );
-                //   console.log("Matching section object:", sectionObj);
-                  // Similarly, check if your batches use "Batch_ID" or "id"
                   const batchObj =
                     sectionObj &&
                     sectionObj.Batch_ID &&
@@ -505,8 +513,7 @@ if (slot.Theory_or_Lab === "lab") {
                       : batches.find(
                           (b) => String(b.Batch_ID) === String(header.Batch_ID)
                         );
-                //   console.log("Matching batch object:", batchObj);
-                const theoryDetail = generatedData.timetable_details.find(
+                  const theoryDetail = generatedData.timetable_details.find(
                     (d) =>
                       String(d.Timetable_ID) === String(header.Timetable_ID) &&
                       d.Theory_or_Lab === "theory"
