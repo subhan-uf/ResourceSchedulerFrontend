@@ -552,7 +552,11 @@ for (const sectionId of selectedSections) {
   // ------------------------------------
   // TABS
   // ------------------------------------
-  const tabLabels = ["View list of teachers", "Enter new teacher"];
+  const tabLabels = [
+    "View list of teachers",
+    isEditing ? "Updating teacher" : "Enter new teacher"
+  ];
+  
 
   // Tab 1 => teacher list
   const tableContent = (
@@ -748,6 +752,14 @@ for (const sectionId of selectedSections) {
               {isEditing ? "Update Teacher" : "Submit"}
             </Button>
           </Box>
+          {isEditing && (
+  <Box sx={{ gridColumn: "span 2", textAlign: "center", mt: 2 }}>
+    <Button variant="outlined" color="secondary" onClick={resetForm} fullWidth>
+      Stop Updating
+    </Button>
+  </Box>
+)}
+
         </Box>
       </form>
     </>

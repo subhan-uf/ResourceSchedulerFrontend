@@ -669,10 +669,10 @@ function Preference() {
         }
         else {
           // Otherwise, allow the next one or two slots (if available).
-          if (idx + 1 < endTimes.length) {
+          if (idx + 1 <= endTimes.length) {
             options.push(endTimes[idx ]);
           }
-          if (idx + 2 < endTimes.length) {
+          if (idx + 2 <= endTimes.length) {
             options.push(endTimes[idx + 1]);
           }
         }
@@ -759,13 +759,12 @@ function Preference() {
           {/* Floor */}
           <FormControl fullWidth>
             <Singledropdown
-              label="Preferred floor (Optional)"
+              label="Floor Constraint (Hard)"
               name="preferredFloor"
               value={preferredFloor}
               menuItems={[
                 { label: "Ground", value: "Ground" },
-                { label: "1st", value: "1st" },
-                { label: "2nd", value: "2nd" },
+               
               ]}
               onChange={(newVal) => {
                 setPreferredFloor(newVal);

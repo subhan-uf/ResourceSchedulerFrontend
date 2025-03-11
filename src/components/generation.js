@@ -14,6 +14,9 @@ import batchService from "./api/batchService";
 import teacherCourseAssignmentService from "./api/teacherCourseAssignmentService";
 import batchCourseTeacherAssignmentService from "./api/batchCourseTeacherAssignmentService";
 import coursePreferenceService from "./api/courseTimePreferenceService";
+import GeneratedTimetables from "./designelements/generatedTimetables";
+import GenerationDescriptionModal from "./designelements/generationDescriptionModal";
+import apiClient from "./api/apiClient";
 
 // A helper to normalize time strings to "HH:MM:SS" format
 const normalizeTime = (timeStr) => {
@@ -39,6 +42,8 @@ const adjustEndTime = (startStr, endStr) => {
 
 function Generation() {
   // State for fetched data
+  const [selectedGeneration, setSelectedGeneration] = useState(null);
+const [activeTab, setActiveTab] = useState(0);
   const [teachers, setTeachers] = useState([]);
   const [rooms, setRooms] = useState([]);
   const [labRooms, setLabRooms] = useState([]);
@@ -48,14 +53,21 @@ function Generation() {
   const [tcaList, setTcaList] = useState([]);
   const [bctaList, setBctaList] = useState([]);
   const [coursePrefs, setCoursePrefs] = useState([]);
-
+  const [isEditing, setIsEditing] = useState(false);
   // Additional states
   const [lockedSlots, setLockedSlots] = useState([]);
   const [disabledDays, setDisabledDays] = useState({});
   const [generatedData, setGeneratedData] = useState(null);
   const [loading, setLoading] = useState(false);
-
+  const [showModal, setShowModal] = useState(false);
+  // Save the timetable status ("draft" or "published") that triggered the modal
+  const [timetableStatus, setTimetableStatus] = useState("");
   // Fetch all required data on mount
+  const initiateSaveTimetable = (status) => {
+    setTimetableStatus(status);
+    setShowModal(true);
+  };
+
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -371,7 +383,7 @@ function Generation() {
       lab_rooms: formatRooms(labRooms),
       teachers: mapTeacherAssignments(),
       discipline_info: mapDisciplineInfo(),
-      locked_slots: mapLockedSlots(),
+      locked_slots: lockedSlots,
       disabled_days: disabledDays,
     };
   };
@@ -396,7 +408,93 @@ function Generation() {
       setLoading(false);
     }
   };
+  const fetchSavedTimetableData = async (generationId) => {
+    try {
+      // Fetch all saved timetable headers and details
+      const headersResponse = await apiClient.get('/timetable-header/');
+      const detailsResponse = await apiClient.get('/timetable-detail/');
+      
+      const allHeaders = headersResponse.data;
+      const allDetails = detailsResponse.data;
+      // console.log(allHeaders)
+      // Filter headers by the selected generation's ID.
+      const filteredHeaders = allHeaders.filter(header => {
+        // Using the field name as stored in the database:
+        return String(header.Generation) === String(generationId);
+      });
+      
+      // Filter details whose Timetable_ID appears in the filtered headers.
+      const filteredDetails = allDetails.filter(detail =>
+        filteredHeaders.some(header => String(header.Timetable_ID) === String(detail.Timetable_ID))
+      );
+      
+      // Return the filtered data.
+      return { timetable_headers: filteredHeaders, timetable_details: filteredDetails };
+    } catch (error) {
+      console.error("Error fetching saved timetable data:", error);
+      return null;
+    }
+  };
 
+  const dayNames = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
+  const getDayIndex = (day) => dayNames.indexOf(day);
+  
+  const timeslotsOrder = [
+    "08:30-09:20",
+    "09:20-10:10",
+    "10:10-11:00",
+    "11:30-12:20",
+    "12:20-1:10",
+    "2:00-2:50",
+    "2:50-3:40",
+    "3:40-4:30",
+  ];
+
+const handleViewEditGeneration = async (generation) => {
+  console.log("Selected generation for view/edit:", generation);
+  const savedData = await fetchSavedTimetableData(generation.Generation_ID);
+  console.log("Fetched saved timetable data:", savedData);
+
+  if (savedData && savedData.timetable_headers && savedData.timetable_details) {
+    setGeneratedData(savedData);
+    setIsEditing(true);
+
+    // Compute locked slots based on the saved timetable details.
+    const newLockedSlots = [];
+    savedData.timetable_headers.forEach((header) => {
+      // Filter details for this header
+      const detailsForHeader = savedData.timetable_details.filter(
+        (d) => String(d.Timetable_ID) === String(header.Timetable_ID)
+      );
+      detailsForHeader.forEach((detail) => {
+        // Only add if detail is locked
+        if (detail.Locked) {
+          // Calculate day index and timeslot index.
+          const dayIndex = getDayIndex(detail.Day);
+          const timeslotIndex = getTimeslotIndex(detail.Start_time || detail.Start_Time || "");
+          if (dayIndex !== -1 && timeslotIndex !== -1) {
+            const slotKey = `${header.Timetable_ID}-${dayIndex}-${timeslotIndex}`;
+            newLockedSlots.push(slotKey);
+          }
+        }
+      });
+    });
+    // Update state with the computed locked slots.
+    setLockedSlots(newLockedSlots);
+  } else {
+    console.warn("No saved timetable data found for this generation");
+    setGeneratedData(null);
+    setIsEditing(false);
+    setLockedSlots([]); // Clear locked slots if no data found
+  }
+  
+  // Switch back to the first tab.
+  setActiveTab(0);
+};
+
+  
+  
+  
   // This transform function produces data in the format the timetable component expects.
   const transformToTimetableFormat = (details, header) => {
     const timeslotsOrder = [
@@ -410,16 +508,19 @@ function Generation() {
       "3:40-4:30",
     ];
     const daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
-
+  
     return timeslotsOrder.map((timeSlot) => {
       const expectedStart = normalizeTime(timeSlot.split("-")[0] + ":00");
       const formattedTime = timeSlot.replace("-", " - ");
       const rowDays = daysOfWeek.map((dayName) => {
         const slot = details.find((d) => {
-          if (d.Day !== dayName || !d.Start_Time || !d.End_Time) return false;
+          // Use a fallback for the time fields:
+          const startTime = d.Start_time || d.Start_Time;
+          const endTime = d.End_time || d.End_Time;
+          if (d.Day !== dayName || !startTime || !endTime) return false;
           if (String(d.Timetable_ID) !== String(header.Timetable_ID)) return false;
-          const eventStart = timeToMinutes(normalizeTime(d.Start_Time));
-          const eventEnd = timeToMinutes(adjustEndTime(d.Start_Time, d.End_Time));
+          const eventStart = timeToMinutes(normalizeTime(startTime));
+          const eventEnd = timeToMinutes(adjustEndTime(startTime, endTime));
           const slotStart = timeToMinutes(expectedStart);
           const slotEnd = timeToMinutes(adjustEndTime(timeSlot.split("-")[0] + ":00", timeSlot.split("-")[1] + ":00"));
           return eventStart < slotEnd && eventEnd > slotStart;
@@ -458,6 +559,9 @@ function Generation() {
       };
     });
   };
+  
+  
+  
 
   const handleLockSlot = (timetableId, dayIndex, timeIndex) => {
     const slotKey = `${timetableId}-${dayIndex}-${timeIndex}`;
@@ -478,14 +582,125 @@ function Generation() {
         : [dayIndex],
     }));
   };
+  // Inside your Generation component (Generation.js)
+ 
+const getTimeslotIndex = (startTime) => {
+  // Compare the normalized start time with each timeslot's start time.
+  for (let i = 0; i < timeslotsOrder.length; i++) {
+    const slotStart = normalizeTime(timeslotsOrder[i].split("-")[0] + ":00");
+    if (normalizeTime(startTime) === slotStart) return i;
+  }
+  return -1; // if not found
+};
+  const handleSaveTimetable = async (description) => {
+    try {
+      if (isEditing && selectedGeneration) {
+        // Prepare payload for updating (this might be similar to your headerPayload construction)
+        // For each header you want to update, call updateGeneration or update the headers individually.
+        // For simplicity, here we assume you update the generation record:
+        const updatePayload = { Description: description }; // add any other fields if needed
+        const updateResponse = await generationService.updateGeneration(selectedGeneration.Generation_ID, updatePayload);
+        console.log("Updated Generation:", updateResponse.data);
+        
+        // Then, you can loop over generatedData.timetable_headers and update them
+        // (Assume you have a similar API endpoint for updating a timetable header)
+        for (const header of generatedData.timetable_headers) {
+          const headerPayload = {
+            Batch_ID: header.Batch_ID,
+            Section_ID: header.Section_ID,
+            Status: timetableStatus, // "draft" or "published"
+            Generation: selectedGeneration.Generation_ID, // use the existing generation id
+          };
+          console.log("Updating Header payload:", headerPayload);
+          await generationService.updateTimetableHeader(header.Timetable_ID, headerPayload);
+          // If needed, update timetable details similarly...
+        }
+        alert(`Timetable ${timetableStatus} successfully updated!`);
+      } else {
+        // Create new generation record as before
+        const generationResponse = await generationService.createGeneration({ Description: description });
+        console.log("New Generation:", generationResponse.data);
+        const newGeneration = generationResponse.data;
+        for (const header of generatedData.timetable_headers) {
+          const headerPayload = {
+            Batch_ID: header.Batch_ID,
+            Section_ID: header.Section_ID,
+            Status: timetableStatus,
+            Generation: newGeneration.Generation_ID,
+          };
+          console.log("Header payload:", headerPayload);
+          const savedHeaderResponse = await generationService.saveTimetableHeader(headerPayload);
+          const newTimetableId = savedHeaderResponse.data.Timetable_ID;
+          console.log("New Timetable ID:", newTimetableId);
+          const detailsForHeader = generatedData.timetable_details.filter(
+            (d) => String(d.Timetable_ID) === String(header.Timetable_ID)
+          );
+          for (const detail of detailsForHeader) {
+            const detailStart = detail.Start_time || detail.Start_Time || "";
+          const dayIndex = getDayIndex(detail.Day);
+          const timeslotIndex = getTimeslotIndex(detailStart);
+          // Build a slot key using the original header timetable id
+          const slotKey = `${header.Timetable_ID}-${dayIndex}-${timeslotIndex}`;
+          const isLocked = lockedSlots.includes(slotKey);
+            const detailPayload = {
+              Timetable_ID: newTimetableId,
+              Course_ID: detail.Course_ID,
+              Teacher_ID: Number(detail.Teacher_ID),
+              Room_ID: Number(detail.Room_ID),
+              Day: detail.Day,
+              Start_time: normalizeTime(detail.Start_time || detail.Start_Time || ""),
+              End_time: normalizeTime(detail.End_time || detail.End_Time || ""),
+              
+              Locked: isLocked,
+              Teacher_pref_status: detail.Teacher_pref_status || "",
+              Theory_or_Lab: detail.Theory_or_Lab,
+              Hard_slot: detail.Hard_slot || false,
+            };
+            console.log("Detail payload:", detailPayload);
+            await generationService.saveTimetableDetail(detailPayload);
+          }
+        }
+        alert(`Timetable ${timetableStatus} successfully saved!`);
+      }
+    } catch (error) {
+      console.error(`Error saving/updating timetable as ${timetableStatus}:`, error);
+    }
+  };
+  
+
+  
+  
 
   // --- RENDER ---
   return (
     <div>
-      <TeacherTabs
-        tabLabels={["Generate Timetable"]}
+<TeacherTabs
+  externalIndex={activeTab}
+  onIndexChange={(newTab) => setActiveTab(newTab)}
+  tabLabels={[
+    isEditing ? "Editing Timetables" : "Generate Timetable", 
+    "Generated Timetables"
+  ]}
         tabContent={[
+          
           <div key="generation-tab">
+            {isEditing && (
+  <Box sx={{ display: "flex", justifyContent: "flex-end", mb: 2 }}>
+    <Button
+      variant="outlined"
+      color="neutral"
+      onClick={() => {
+        setIsEditing(false);
+        setSelectedGeneration(null);
+        // Optionally, you may want to clear generatedData or re-fetch fresh generated data
+        // setGeneratedData(null);
+      }}
+    >
+      Stop Editing
+    </Button>
+  </Box>
+)}
+
             <Box sx={{ display: "flex", justifyContent: "center", mt: 2 }}>
               <Button
                 variant="solid"
@@ -494,14 +709,14 @@ function Generation() {
                 disabled={loading}
                 startDecorator={loading && <CircularProgress size={20} />}
               >
-                {loading ? "Generating..." : "Generate Timetables"}
+                {loading ? "Generating..." : generatedData ? "Re-generate Timetable" : "Generate Timetable"}
               </Button>
             </Box>
 
             {generatedData && generatedData.timetable_headers ? (
               <Box sx={{ mt: 4 }}>
                 {generatedData.timetable_headers.map((header) => {
-                  console.log("Timetable header:", header);
+                  // console.log("Timetable header:", header);
                   const sectionObj = sections.find(
                     (s) => String(s.Section_ID) === String(header.Section_ID)
                   );
@@ -529,23 +744,20 @@ function Generation() {
                       sx={{ display: "flex", justifyContent: "center", mt: 2 }}
                     >
                       <div className="w-full max-w-4xl border border-gray-300 rounded-lg p-4">
-                        <Timetable
-                          timetable={transformToTimetableFormat(
-                            generatedData.timetable_details,
-                            header
-                          )}
-                          sectionAndBatch={`${batchObj ? batchObj.Batch_name : "Unknown Batch"} - ${
-                            sectionObj ? sectionObj.Section_name : "Unknown Section"
-                          } (Room ${theoryRoomObj ? theoryRoomObj.Room_no : "N/A"})`}
-                          lockedSlots={lockedSlots}
-                          disabledDays={disabledDays[header.Timetable_ID] || []}
-                          onLockSlot={(dayIndex, timeIndex) =>
-                            handleLockSlot(header.Timetable_ID, dayIndex, timeIndex)
-                          }
-                          onToggleDay={(dayIndex) =>
-                            handleToggleDay(header.Timetable_ID, dayIndex)
-                          }
-                        />
+                      <Timetable
+  timetable={transformToTimetableFormat(generatedData.timetable_details, header)}
+  sectionAndBatch={`${batchObj ? batchObj.Batch_name : "Unknown Batch"} - ${sectionObj ? sectionObj.Section_name : "Unknown Section"} (Room ${theoryRoomObj ? theoryRoomObj.Room_no : "N/A"})`}
+  lockedSlots={lockedSlots}
+  disabledDays={disabledDays[header.Timetable_ID] || []}
+  timetableId={header.Timetable_ID}  // NEW: Pass timetable ID
+  onLockSlot={(dayIndex, timeIndex) =>
+    handleLockSlot(header.Timetable_ID, dayIndex, timeIndex)
+  }
+  onToggleDay={(dayIndex) =>
+    handleToggleDay(header.Timetable_ID, dayIndex)
+  }
+/>
+
                       </div>
                     </Box>
                   );
@@ -556,8 +768,46 @@ function Generation() {
                 <div>No timetable generated yet</div>
               </Box>
             )}
+            <Box sx={{ display: "flex", justifyContent: "center", gap: 2, mt: 4 }}>
+  <Button
+    variant="contained"
+    color="secondary"
+    onClick={() =>initiateSaveTimetable("draft")}
+  >
+    Draft Timetable
+  </Button>
+  <Button
+    variant="contained"
+    color="primary"
+    onClick={() => initiateSaveTimetable("published")}
+  >
+    Publish Timetable
+  </Button>
+</Box>
+
           </div>,
+
+
+<div key="generated-timetables-tab">
+<div key="generated-timetables-tab">
+  <GeneratedTimetables 
+    onEditGeneration={async(generation) => {
+      setSelectedGeneration(generation);
+      // console.log("Selected generation for view/edit:", generation);
+      await handleViewEditGeneration(generation);
+    }}
+  />
+</div>
+
+          </div>,
+
         ]}
+      />
+      {/* Render the modal for generation description */}
+      <GenerationDescriptionModal 
+        open={showModal}
+        onClose={() => setShowModal(false)}
+        onSubmit={(description) => handleSaveTimetable(description)}
       />
     </div>
   );
