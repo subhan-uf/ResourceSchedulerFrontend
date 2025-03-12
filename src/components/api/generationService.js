@@ -2,7 +2,7 @@
 import apiClient from './apiClient';
 import axios from 'axios';
 
-const GENERATION_API_URL = 'https://83b8-34-86-234-131.ngrok-free.app/solve';
+const GENERATION_API_URL = 'https://e8a8-35-188-79-80.ngrok-free.app/solve';
 
 const generateTimetable = async (generationData) => {
   try {
@@ -12,6 +12,13 @@ const generateTimetable = async (generationData) => {
     console.error('Error generating timetable:', error);
     throw error;
   }
+};
+const updateTimetableHeader = (headerId, payload) => {
+  return apiClient.put(`/timetable-header/${headerId}/`, payload);
+};
+
+const updateTimetableDetail = (detailId, payload) => {
+  return apiClient.put(`/timetable-detail/${detailId}/`, payload);
 };
 const deleteTimetableHeader = (headerId) => {
   return apiClient.delete(`/timetable-header/${headerId}/`);
@@ -53,4 +60,6 @@ export default {
   getGenerations,
   deleteGeneration,
   updateGeneration,
+  updateTimetableHeader,  // Add this
+  updateTimetableDetail,
 };

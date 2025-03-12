@@ -413,9 +413,10 @@ const [activeTab, setActiveTab] = useState(0);
       // Fetch all saved timetable headers and details
       const headersResponse = await apiClient.get('/timetable-header/');
       const detailsResponse = await apiClient.get('/timetable-detail/');
-      
+      console.log("DETAIL RESPONSE", detailsResponse)
       const allHeaders = headersResponse.data;
       const allDetails = detailsResponse.data;
+      console.log(detailsResponse)
       // console.log(allHeaders)
       // Filter headers by the selected generation's ID.
       const filteredHeaders = allHeaders.filter(header => {
@@ -427,7 +428,8 @@ const [activeTab, setActiveTab] = useState(0);
       const filteredDetails = allDetails.filter(detail =>
         filteredHeaders.some(header => String(header.Timetable_ID) === String(detail.Timetable_ID))
       );
-      
+      console.log("FILTERED DETAILS",filteredDetails)
+
       // Return the filtered data.
       return { timetable_headers: filteredHeaders, timetable_details: filteredDetails };
     } catch (error) {
@@ -592,80 +594,119 @@ const getTimeslotIndex = (startTime) => {
   }
   return -1; // if not found
 };
-  const handleSaveTimetable = async (description) => {
-    try {
-      if (isEditing && selectedGeneration) {
-        // Prepare payload for updating (this might be similar to your headerPayload construction)
-        // For each header you want to update, call updateGeneration or update the headers individually.
-        // For simplicity, here we assume you update the generation record:
-        const updatePayload = { Description: description }; // add any other fields if needed
-        const updateResponse = await generationService.updateGeneration(selectedGeneration.Generation_ID, updatePayload);
-        console.log("Updated Generation:", updateResponse.data);
-        
-        // Then, you can loop over generatedData.timetable_headers and update them
-        // (Assume you have a similar API endpoint for updating a timetable header)
-        for (const header of generatedData.timetable_headers) {
-          const headerPayload = {
-            Batch_ID: header.Batch_ID,
-            Section_ID: header.Section_ID,
-            Status: timetableStatus, // "draft" or "published"
-            Generation: selectedGeneration.Generation_ID, // use the existing generation id
-          };
-          console.log("Updating Header payload:", headerPayload);
-          await generationService.updateTimetableHeader(header.Timetable_ID, headerPayload);
-          // If needed, update timetable details similarly...
-        }
-        alert(`Timetable ${timetableStatus} successfully updated!`);
-      } else {
-        // Create new generation record as before
-        const generationResponse = await generationService.createGeneration({ Description: description });
-        console.log("New Generation:", generationResponse.data);
-        const newGeneration = generationResponse.data;
-        for (const header of generatedData.timetable_headers) {
-          const headerPayload = {
-            Batch_ID: header.Batch_ID,
-            Section_ID: header.Section_ID,
-            Status: timetableStatus,
-            Generation: newGeneration.Generation_ID,
-          };
-          console.log("Header payload:", headerPayload);
-          const savedHeaderResponse = await generationService.saveTimetableHeader(headerPayload);
-          const newTimetableId = savedHeaderResponse.data.Timetable_ID;
-          console.log("New Timetable ID:", newTimetableId);
-          const detailsForHeader = generatedData.timetable_details.filter(
-            (d) => String(d.Timetable_ID) === String(header.Timetable_ID)
-          );
-          for (const detail of detailsForHeader) {
-            const detailStart = detail.Start_time || detail.Start_Time || "";
+const handleSaveTimetable = async (description) => {
+  try {
+    if (isEditing && selectedGeneration) {
+      // Update the generation record
+      const updatePayload = { 
+        Description: description,
+        Status: timetableStatus, // Update the status if changed
+        Time_Generated: new Date().toISOString(), // Add timestamp
+      };
+      const updateResponse = await generationService.updateGeneration(selectedGeneration.Generation_ID, updatePayload);
+      console.log("Updated Generation:", updateResponse.data);
+
+      // Update timetable headers
+      for (const header of generatedData.timetable_headers) {
+        const headerPayload = {
+          Batch_ID: header.Batch_ID,
+          Section_ID: header.Section_ID,
+          Status: timetableStatus, // "draft" or "published"
+          Generation: selectedGeneration.Generation_ID, // use the existing generation id
+          // Updated_At: new Date().toISOString(), // Add timestamp
+        };
+        console.log("Updating Header payload:", headerPayload);
+        await generationService.updateTimetableHeader(header.Timetable_ID, headerPayload);
+      }
+
+      // Update timetable details
+      for (const detail of generatedData.timetable_details) {
+        const detailStart = detail.Start_time || detail.Start_Time || "";
+        const dayIndex = getDayIndex(detail.Day);
+        const timeslotIndex = getTimeslotIndex(detailStart);
+        const slotKey = `${detail.Timetable_ID}-${dayIndex}-${timeslotIndex}`;
+        const isLocked = lockedSlots.includes(slotKey);
+
+        const detailPayload = {
+          Timetable_ID: detail.Timetable_ID,
+          Course_ID: detail.Course_ID,
+          Teacher_ID: Number(detail.Teacher_ID),
+          Room_ID: Number(detail.Room_ID),
+          Day: detail.Day,
+          Start_time: normalizeTime(detail.Start_time || detail.Start_Time || ""),
+          End_time: normalizeTime(detail.End_time || detail.End_Time || ""),
+          Locked: isLocked,
+          Teacher_pref_status: detail.Teacher_pref_status || "",
+          Theory_or_Lab: detail.Theory_or_Lab,
+          Hard_slot: detail.Hard_slot || false,
+          // Updated_At: new Date().toISOString(), // Add timestamp
+        };
+        console.log("Detail payload:", detailPayload);
+        await generationService.updateTimetableDetail(
+          detail.Detail_ID || detail.id, // Use correct field name
+          detailPayload
+        );
+      }
+      setIsEditing(false)
+      alert(`Timetable ${timetableStatus} successfully updated!`);
+    } else {
+      // Create new generation record as before
+      const generationResponse = await generationService.createGeneration({ 
+        Description: description,
+        Status: timetableStatus,
+        Time_Generated: new Date().toISOString(), // Add timestamp
+      });
+      console.log("New Generation:", generationResponse.data);
+      const newGeneration = generationResponse.data;
+
+      for (const header of generatedData.timetable_headers) {
+        const headerPayload = {
+          Batch_ID: header.Batch_ID,
+          Section_ID: header.Section_ID,
+          Status: timetableStatus,
+          Generation: newGeneration.Generation_ID,
+          // Created_At: new Date().toISOString(), // Add timestamp
+        };
+        console.log("Header payload:", headerPayload);
+        const savedHeaderResponse = await generationService.saveTimetableHeader(headerPayload);
+        const newTimetableId = savedHeaderResponse.data.Timetable_ID;
+        console.log("New Timetable ID:", newTimetableId);
+
+        const detailsForHeader = generatedData.timetable_details.filter(
+          (d) => String(d.Timetable_ID) === String(header.Timetable_ID)
+        );
+
+        for (const detail of detailsForHeader) {
+          const detailStart = detail.Start_time || detail.Start_Time || "";
           const dayIndex = getDayIndex(detail.Day);
           const timeslotIndex = getTimeslotIndex(detailStart);
-          // Build a slot key using the original header timetable id
           const slotKey = `${header.Timetable_ID}-${dayIndex}-${timeslotIndex}`;
           const isLocked = lockedSlots.includes(slotKey);
-            const detailPayload = {
-              Timetable_ID: newTimetableId,
-              Course_ID: detail.Course_ID,
-              Teacher_ID: Number(detail.Teacher_ID),
-              Room_ID: Number(detail.Room_ID),
-              Day: detail.Day,
-              Start_time: normalizeTime(detail.Start_time || detail.Start_Time || ""),
-              End_time: normalizeTime(detail.End_time || detail.End_Time || ""),
-              
-              Locked: isLocked,
-              Teacher_pref_status: detail.Teacher_pref_status || "",
-              Theory_or_Lab: detail.Theory_or_Lab,
-              Hard_slot: detail.Hard_slot || false,
-            };
-            console.log("Detail payload:", detailPayload);
-            await generationService.saveTimetableDetail(detailPayload);
-          }
+
+          const detailPayload = {
+            Timetable_ID: newTimetableId,
+            Course_ID: detail.Course_ID,
+            Teacher_ID: Number(detail.Teacher_ID),
+            Room_ID: Number(detail.Room_ID),
+            Day: detail.Day,
+            Start_time: normalizeTime(detail.Start_time || detail.Start_Time || ""),
+            End_time: normalizeTime(detail.End_time || detail.End_Time || ""),
+            Locked: isLocked,
+            Teacher_pref_status: detail.Teacher_pref_status || "",
+            Theory_or_Lab: detail.Theory_or_Lab,
+            Hard_slot: detail.Hard_slot || false,
+            // Created_At: new Date().toISOString(), // Add timestamp
+          };
+          console.log("Detail payload:", detailPayload);
+          await generationService.saveTimetableDetail(detailPayload);
         }
-        alert(`Timetable ${timetableStatus} successfully saved!`);
       }
-    } catch (error) {
-      console.error(`Error saving/updating timetable as ${timetableStatus}:`, error);
+      alert(`Timetable ${timetableStatus} successfully saved!`);
     }
-  };
+  } catch (error) {
+    console.error(`Error saving/updating timetable as ${timetableStatus}:`, error);
+  }
+};
   
 
   
@@ -805,10 +846,11 @@ const getTimeslotIndex = (startTime) => {
       />
       {/* Render the modal for generation description */}
       <GenerationDescriptionModal 
-        open={showModal}
-        onClose={() => setShowModal(false)}
-        onSubmit={(description) => handleSaveTimetable(description)}
-      />
+  open={showModal}
+  onClose={() => setShowModal(false)}
+  onSubmit={(description) => handleSaveTimetable(description)}
+  initialDescription={selectedGeneration ? selectedGeneration.Description : ""}  // Pass the existing description
+/>
     </div>
   );
 }

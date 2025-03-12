@@ -1,5 +1,5 @@
 // src/components/designelements/generationDescriptionModal.js
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Modal,
   ModalDialog,
@@ -10,8 +10,11 @@ import {
   Stack,
 } from '@mui/joy';
 
-const GenerationDescriptionModal = ({ open, onClose, onSubmit }) => {
-  const [description, setDescription] = useState('');
+const GenerationDescriptionModal = ({ open, onClose, onSubmit, initialDescription = "" }) => {
+  const [description, setDescription] = useState(initialDescription);
+  useEffect(() => {
+    setDescription(initialDescription);
+  }, [initialDescription]);
 
   const handleSubmit = () => {
     onSubmit(description);
