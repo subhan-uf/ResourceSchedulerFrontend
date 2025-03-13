@@ -22,11 +22,18 @@ import apiClient from "./api/apiClient";
 const normalizeTime = (timeStr) => {
   if (!timeStr) return "";
   const parts = timeStr.split(":");
-  const hour = parts[0].padStart(2, "0");
-  const minute = (parts[1] || "00").padStart(2, "0");
-  const second = (parts[2] || "00").padStart(2, "0");
-  return `${hour}:${minute}:${second}`;
+  let hour = parseInt(parts[0]);
+  const minute = parts[1] || "00";
+  const second = parts[2] || "00";
+
+  // If the hour is less than 6, assume it's the next day (after midnight)
+  // if (hour < 6) {
+  //   hour += 24;
+  // }
+
+  return `${String(hour).padStart(2, "0")}:${minute}:${second}`;
 };
+
 
 const adjustEndTime = (startStr, endStr) => {
   const start = normalizeTime(startStr);
@@ -63,6 +70,7 @@ const [activeTab, setActiveTab] = useState(0);
   // Save the timetable status ("draft" or "published") that triggered the modal
   const [timetableStatus, setTimetableStatus] = useState("");
   // Fetch all required data on mount
+  const currentAcademicYear = 2025;
   const initiateSaveTimetable = (status) => {
     setTimetableStatus(status);
     setShowModal(true);
@@ -91,13 +99,13 @@ const [activeTab, setActiveTab] = useState(0);
           coursePreferenceService.getAll(), // fetch time preferences
         ]);
 
-        console.log("Fetched Teachers:", teachRes.data);
-        console.log("Fetched Rooms:", roomRes.data);
-        console.log("Fetched Sections:", sectionRes.data);
-        console.log("Fetched Batches:", batchRes.data);
-        console.log("Fetched Courses:", courseRes.data);
-        console.log("Fetched TCA:", tcaRes.data);
-        console.log("Fetched BCTA:", bctaRes.data);
+        // console.log("Fetched Teachers:", teachRes.data);
+        // console.log("Fetched Rooms:", roomRes.data);
+        // console.log("Fetched Sections:", sectionRes.data);
+        // console.log("Fetched Batches:", batchRes.data);
+        // console.log("Fetched Courses:", courseRes.data);
+        // console.log("Fetched TCA:", tcaRes.data);
+        // console.log("Fetched BCTA:", bctaRes.data);
 
         setTeachers(teachRes.data || []);
         setRooms(
@@ -172,7 +180,7 @@ const [activeTab, setActiveTab] = useState(0);
         if (batchObj) {
           discipline = batchObj.Discipline;
           batchId = batchObj.Batch_ID; // for response
-          year = batchObj.Year ? batchObj.Year - 2020 : 1;
+          year = batchObj.Year ? currentAcademicYear-batchObj.Year  : 1;
           const sectionsForBatch = sections.filter((s) => String(s.Batch_ID) === String(batchObj.Batch_ID));
           const matchingSection = sectionsForBatch.find((s) => String(s.Section_ID) === String(tca.Section_ID || s.Section_ID));
           if (matchingSection) {
@@ -219,7 +227,7 @@ const [activeTab, setActiveTab] = useState(0);
         if (batchObj) {
           discipline = batchObj.Discipline;
           batchId = batchObj.Batch_ID;  // for response
-          year = batchObj.Year ? batchObj.Year - 2020 : 1;
+          year = batchObj.Year ? currentAcademicYear-batchObj.Year  : 1;
         }
       }
       let sectionId = null;
@@ -265,24 +273,21 @@ const [activeTab, setActiveTab] = useState(0);
     coursePrefs.forEach((cp) => {
       const tid = String(cp.Teacher_ID?.Teacher_ID || cp.Teacher_ID);
       if (!teacherTimePrefs[tid]) teacherTimePrefs[tid] = [];
-      const timeslotBoundaries = [
-        "08:30:00", // slot 0 start
-        "09:20:00", // slot 1 start
-        "10:10:00", // slot 2 start
-        "11:30:00", // slot 3 start (after the 11:00-11:30 break)
-        "12:20:00", // slot 4 start
-        "02:00:00", // slot 5 start (after the 1:10-2:00 break)
-        "02:50:00", // slot 6 start
-        "03:40:00"  // slot 7 start
-      ];
+     
       
       // Normalize the teacher's times:
       const normalizedStart = normalizeTime(cp.Start_time); // e.g. "08:30:00"
       const normalizedEnd = normalizeTime(cp.End_time);       // e.g. "09:20:00"
       console.log(normalizedStart)
       // Find the indices:
-      const start_slot_index = timeslotBoundaries.indexOf(normalizedStart);
-      const end_slot_index = timeslotBoundaries.indexOf(normalizedEnd) - 1;
+      let start_slot_index = timeslotBoundaries.indexOf(normalizedStart);
+      let end_slot_index = timeslotBoundaries.indexOf(normalizedEnd) - 1;
+      if (start_slot_index > timeslotBoundaries.indexOf("01:10:00")) {
+        start_slot_index -= 1; // Adjust to skip "1:10"
+      }
+      if (end_slot_index > timeslotBoundaries.indexOf("01:10:00")) {
+        end_slot_index -= 1; // Adjust to skip "1:10"
+      }
       let courseName = "Default Course";
       if (cp.Course_ID) {
         const foundCourse = courses.find(
@@ -308,6 +313,17 @@ const [activeTab, setActiveTab] = useState(0);
     });
     return teacherAssignments;
   };
+  const timeslotBoundaries = [
+    "08:30:00", // slot 0 start
+    "09:20:00", // slot 1 start
+    "10:10:00", // slot 2 start
+    "11:30:00", // slot 3 start (after the 11:00-11:30 break)
+    "12:20:00", // slot 4 start
+    "01:10:00",
+    "02:00:00", // slot 5 start (after the 1:10-2:00 break)
+    "02:50:00", // slot 6 start
+    "03:40:00"  // slot 7 start
+  ];
 
   const timeToMinutes = (timeStr) => {
     const [h, m, s] = timeStr.split(':').map(Number);
@@ -317,8 +333,10 @@ const [activeTab, setActiveTab] = useState(0);
   const mapDisciplineInfo = () => {
     const disciplineInfo = {};
     batches.forEach((batch) => {
+      // console.log("BATCH YEARRRR", batch.Year)
       // Calculate year as provided (e.g., 1 means 1st year)
-      const year = batch.Year ? batch.Year - 2020 : 1;
+      const year = batch.Year ? currentAcademicYear- batch.Year  : 1;
+      // console.log("YEARRR", year)
       const key = `${batch.Discipline}, ${year}`;
       const batchCourses = courses.filter((course) => {
         if (typeof course.Batch_ID === "object") {
@@ -348,44 +366,130 @@ const [activeTab, setActiveTab] = useState(0);
   };
 
   const mapLockedSlots = () => {
-    if (!generatedData || !generatedData.timetable_headers) return [];
-    return lockedSlots.map((lock) => {
-      const [timetableId, dayIndex, timeIndex] = lock.split("-");
+    if (!generatedData || !generatedData.timetable_details) return [];
+  
+    // Get the discipline info mapping (if not already cached, you might want to cache this)
+    const disciplineInfoMapping = mapDisciplineInfo();
+  
+    return lockedSlots.map((lockKey) => {
+      const [timetableId, dayIndex, timeIndex] = lockKey.split("-");
+  
+      // 1. Find the timetable header using the locked timetableId
       const header = generatedData.timetable_headers.find(
         (h) => String(h.Timetable_ID) === String(timetableId)
       );
-      const section = sections.find(
-        (s) => String(s.Section_ID) === String(header?.Section_ID)
+  
+      // 2. Get all details for this timetable
+      const timetableDetails = generatedData.timetable_details.filter(
+        (d) => String(d.Timetable_ID) === String(timetableId)
       );
+  
+      // 3. Find the detail that covers this timeslot
+      let targetDetail = null;
+      for (const detail of timetableDetails) {
+        const coveredSlots = getCoveredSlots(
+          detail.Start_time || detail.Start_Time,
+          detail.End_time || detail.End_Time
+        );
+        if (coveredSlots.includes(parseInt(timeIndex))) {
+          targetDetail = detail;
+          break;
+        }
+      }
+  
+      // 4. Get the batch and section info from header
+      const section = sections.find((s) =>
+        String(s.Section_ID) === String(header?.Section_ID)
+      );
+      const batch = batches.find((b) =>
+        String(b.Batch_ID) === String(header?.Batch_ID)
+      );
+  
+      // 5. Compute the discipline key as used in mapDisciplineInfo
+      const computedYear = batch?.Year ? currentAcademicYear - batch.Year : 1;
+      const disciplineKey = `${batch?.Discipline || "Unknown"}, ${computedYear}`;
+  
+      // 6. Get the discipline info object and then find the index of the section
+      let sectionIndex = 0;
+      const discInfo = disciplineInfoMapping[disciplineKey];
+      if (discInfo && discInfo.sections) {
+        const foundIndex = discInfo.sections.findIndex(
+          (id) => String(id) === String(section?.Section_ID)
+        );
+        sectionIndex = foundIndex !== -1 ? foundIndex : 0;
+      }
+  
+      // 7. Get course code from targetDetail
+      let scode = "UNKNOWN_COURSE";
+if (targetDetail && targetDetail.Course_ID) {
+  const course = courses.find(
+    (c) => String(c.Course_ID) === String(targetDetail.Course_ID)
+  );
+  if (course) {
+    // If the course is a lab, use the lab suffix.
+    if (targetDetail.Theory_or_Lab === "lab") {
+      scode = course.Course_name + "_L2Cons";
+    } else {
+      // For theory courses, compute the covered slots.
+      const slots = getCoveredSlots(
+        targetDetail.Start_time || targetDetail.Start_Time,
+        targetDetail.End_time || targetDetail.End_Time
+      );
+      // If there are consecutive slots, use the T2Cons suffix; otherwise T1Sep.
+      if (slots.length > 1) {
+        scode = course.Course_name + "_T2Cons";
+      } else {
+        scode = course.Course_name + "_T1Sep";
+      }
+    }
+  }
+}
+  
       return {
-        disc:
-          section && section.Batch_ID && typeof section.Batch_ID === "object"
-            ? section.Batch_ID.Discipline
-            : "Unknown",
-        year:
-          section && section.Batch_ID && typeof section.Batch_ID === "object"
-            ? section.Batch_ID.Year - 2020
-            : 1,
-        section:
-          section && section.Section_name
-            ? section.Section_name.charCodeAt(0) - 65
-            : 0,
-        scode: "COURSE_CODE",
-        day: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][parseInt(dayIndex)],
+        disc: batch?.Discipline || "Unknown",
+        year: computedYear,
+        section: sectionIndex, // <-- now using the index from the discipline info's sections array
+        scode,
+        day: ["Mon", "Tue", "Wed", "Thu", "Fri"][parseInt(dayIndex)],
         timeslot: parseInt(timeIndex),
       };
     });
   };
-
+  
+  
   const mapDataForAlgorithm = () => {
     return {
       rooms: formatRooms(rooms),
       lab_rooms: formatRooms(labRooms),
       teachers: mapTeacherAssignments(),
       discipline_info: mapDisciplineInfo(),
-      locked_slots: lockedSlots,
+      locked_slots: mapLockedSlots,
       disabled_days: disabledDays,
     };
+  };
+  const getCoveredSlots = (startTime, endTime) => {
+    const start = normalizeTime(startTime);
+    const end = normalizeTime(endTime);
+    const startMinutes = timeToMinutes(start);
+    const endMinutes = timeToMinutes(adjustEndTime(startTime, endTime)); // Modified line
+    
+    const covered = [];
+  
+    for (let i = 0; i < timeslotsOrder.length; i++) {
+      const slot = timeslotsOrder[i];
+      const [slotStartStr, slotEndStr] = slot.split('-');
+      const slotStart = normalizeTime(slotStartStr + ":00");
+      const slotEnd = normalizeTime(adjustEndTime(slotStartStr + ":00", slotEndStr + ":00")); // Modified line
+      
+      const slotStartMinutes = timeToMinutes(slotStart);
+      const slotEndMinutes = timeToMinutes(slotEnd);
+  
+      if (startMinutes < slotEndMinutes && endMinutes > slotStartMinutes) {
+        covered.push(i);
+      }
+    }
+  
+    return covered;
   };
 
   // --- HANDLERS ---
@@ -394,10 +498,15 @@ const [activeTab, setActiveTab] = useState(0);
     try {
       setLoading(true);
       const payload = mapDataForAlgorithm();
+      console.log("Final Payload:", {
+        ...payload,
+        locked_slots: mapLockedSlots() // Add explicit logging
+      });
       console.log("Sending payload:", payload);
       const result = await generationService.generateTimetable(payload);
       console.log("Generation result:", result);
       setGeneratedData(result);
+      setLockedSlots([]);
     } catch (error) {
       console.error("Generation failed:", error);
       if (error.response) {
@@ -452,48 +561,48 @@ const [activeTab, setActiveTab] = useState(0);
     "3:40-4:30",
   ];
 
-const handleViewEditGeneration = async (generation) => {
-  console.log("Selected generation for view/edit:", generation);
-  const savedData = await fetchSavedTimetableData(generation.Generation_ID);
-  console.log("Fetched saved timetable data:", savedData);
-
-  if (savedData && savedData.timetable_headers && savedData.timetable_details) {
-    setGeneratedData(savedData);
-    setIsEditing(true);
-
-    // Compute locked slots based on the saved timetable details.
-    const newLockedSlots = [];
-    savedData.timetable_headers.forEach((header) => {
-      // Filter details for this header
-      const detailsForHeader = savedData.timetable_details.filter(
-        (d) => String(d.Timetable_ID) === String(header.Timetable_ID)
-      );
-      detailsForHeader.forEach((detail) => {
-        // Only add if detail is locked
-        if (detail.Locked) {
-          // Calculate day index and timeslot index.
-          const dayIndex = getDayIndex(detail.Day);
-          const timeslotIndex = getTimeslotIndex(detail.Start_time || detail.Start_Time || "");
-          if (dayIndex !== -1 && timeslotIndex !== -1) {
-            const slotKey = `${header.Timetable_ID}-${dayIndex}-${timeslotIndex}`;
-            newLockedSlots.push(slotKey);
-          }
-        }
-      });
-    });
-    // Update state with the computed locked slots.
-    setLockedSlots(newLockedSlots);
-  } else {
-    console.warn("No saved timetable data found for this generation");
-    setGeneratedData(null);
-    setIsEditing(false);
-    setLockedSlots([]); // Clear locked slots if no data found
-  }
+  const handleViewEditGeneration = async (generation) => {
+    console.log("Selected generation for view/edit:", generation);
+    const savedData = await fetchSavedTimetableData(generation.Generation_ID);
+    console.log("Fetched saved timetable data:", savedData);
   
-  // Switch back to the first tab.
-  setActiveTab(0);
-};
-
+    if (savedData && savedData.timetable_headers && savedData.timetable_details) {
+      setGeneratedData(savedData);
+      setIsEditing(true);
+  
+      // Compute locked slots based on the saved timetable details.
+      const newLockedSlots = [];
+      savedData.timetable_headers.forEach((header) => {
+        const detailsForHeader = savedData.timetable_details.filter(
+          (d) => String(d.Timetable_ID) === String(header.Timetable_ID)
+        );
+        detailsForHeader.forEach((detail) => {
+          if (detail.Locked) {
+            const detailStart = detail.Start_time || detail.Start_Time || "";
+            const detailEnd = detail.End_time || detail.End_Time || "";
+            const day = detail.Day;
+            const dayIndex = getDayIndex(day);
+            const coveredSlots = getCoveredSlots(detailStart, detailEnd);
+  
+            coveredSlots.forEach((timeslotIndex) => {
+              if (dayIndex !== -1 && timeslotIndex !== -1) {
+                const slotKey = `${header.Timetable_ID}-${dayIndex}-${timeslotIndex}`;
+                newLockedSlots.push(slotKey);
+              }
+            });
+          }
+        });
+      });
+      setLockedSlots(newLockedSlots);
+    } else {
+      console.warn("No saved timetable data found for this generation");
+      setGeneratedData(null);
+      setIsEditing(false);
+      setLockedSlots([]);
+    }
+  
+    setActiveTab(0);
+  };
   
   
   
@@ -567,11 +676,19 @@ const handleViewEditGeneration = async (generation) => {
 
   const handleLockSlot = (timetableId, dayIndex, timeIndex) => {
     const slotKey = `${timetableId}-${dayIndex}-${timeIndex}`;
-    setLockedSlots((prev) =>
-      prev.includes(slotKey)
-        ? prev.filter((k) => k !== slotKey)
-        : [...prev, slotKey]
-    );
+    
+    setLockedSlots(prev => {
+      // Ensure we have fresh data for validation
+      const isAlreadyLocked = prev.includes(slotKey);
+      const newLocked = isAlreadyLocked 
+        ? prev.filter(k => k !== slotKey)
+        : [...prev, slotKey];
+      
+      // For debugging
+      console.log("Current locked slots:", mapLockedSlots(newLocked));
+      
+      return newLocked;
+    });
   };
 
   const handleToggleDay = (timetableId, dayIndex) => {
@@ -586,14 +703,19 @@ const handleViewEditGeneration = async (generation) => {
   };
   // Inside your Generation component (Generation.js)
  
-const getTimeslotIndex = (startTime) => {
-  // Compare the normalized start time with each timeslot's start time.
-  for (let i = 0; i < timeslotsOrder.length; i++) {
-    const slotStart = normalizeTime(timeslotsOrder[i].split("-")[0] + ":00");
-    if (normalizeTime(startTime) === slotStart) return i;
-  }
-  return -1; // if not found
-};
+  const getTimeslotIndex = (startTime) => {
+    // Loop through timeslot boundaries
+    for (let i = 0; i < timeslotBoundaries.length; i++) {
+      // Skip the "1:10" slot by checking its value
+      if (timeslotBoundaries[i] === "01:10:00") continue;  // Skip "1:10" slot
+  
+      // Compare normalized start time
+      const slotStart = normalizeTime(timeslotBoundaries[i].split("-")[0] + ":00");
+      if (normalizeTime(startTime) === slotStart) return i;
+    }
+    return -1; // Return -1 if no match found
+  };
+  
 const handleSaveTimetable = async (description) => {
   try {
     if (isEditing && selectedGeneration) {
