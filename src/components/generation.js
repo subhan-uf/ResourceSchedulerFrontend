@@ -297,6 +297,38 @@ const [activeTab, setActiveTab] = useState(0);
           courseName = foundCourse.Course_name;
         }
       }
+
+      let discipline = "Unknown";
+      let year = 1;
+      let computedSectionIndex = 0;
+      if (cp.Course_ID) {
+        const foundCourse = courses.find((c) => String(c.Course_ID) === String(cp.Course_ID));
+        if (foundCourse) {
+          let batchObj;
+          if (typeof foundCourse.Batch_ID === "object") {
+            batchObj = foundCourse.Batch_ID;
+          } else {
+            batchObj = batches.find((b) => String(b.Batch_ID) === String(foundCourse.Batch_ID));
+          }
+          if (batchObj) {
+            discipline = batchObj.Discipline;
+            year = batchObj.Year ? currentAcademicYear - batchObj.Year : 1;
+            // Use the discipline info mapping to get the section index from the sections array.
+            const disciplineKey = `${batchObj.Discipline}, ${year}`;
+            const discInfo = mapDisciplineInfo()[disciplineKey];
+            if (discInfo && discInfo.sections) {
+              // Use cp.Section if provided; otherwise default to 0.
+              computedSectionIndex =
+                cp.Section !== undefined
+                  ? discInfo.sections.findIndex(
+                      (sectionId) => String(sectionId) === String(cp.Section)
+                    )
+                  : 0;
+              if (computedSectionIndex === -1) computedSectionIndex = 0;
+            }
+          }
+        }
+      }
       teacherTimePrefs[tid].push({
         course_name: courseName,
         course_type: cp.Lab_or_Theory || "theory",
@@ -306,6 +338,8 @@ const [activeTab, setActiveTab] = useState(0);
         needs_speaker: cp.Speaker || false,
         needs_multimedia: cp.Multimedia_requirement || false,
         is_hard: cp.Hard_constraint || false,
+        batch: [discipline, year],  // New attribute as a tuple
+        section: computedSectionIndex
       });
     });
     Object.keys(teacherAssignments).forEach((tid) => {
@@ -385,17 +419,26 @@ const [activeTab, setActiveTab] = useState(0);
       );
   
       // 3. Find the detail that covers this timeslot
-      let targetDetail = null;
-      for (const detail of timetableDetails) {
-        const coveredSlots = getCoveredSlots(
-          detail.Start_time || detail.Start_Time,
-          detail.End_time || detail.End_Time
-        );
-        if (coveredSlots.includes(parseInt(timeIndex))) {
-          targetDetail = detail;
-          break;
-        }
-      }
+      
+let labDetail = null;
+let theoryDetail = null;
+for (const detail of timetableDetails) {
+  const coveredSlots = getCoveredSlots(
+    detail.Start_time || detail.Start_Time,
+    detail.End_time || detail.End_Time
+  );
+  if (coveredSlots.includes(parseInt(timeIndex))) {
+    // Collect details by type
+    if (detail.Theory_or_Lab === "lab") {
+      labDetail = detail;
+    } else {
+      theoryDetail = detail;
+    }
+  }
+}
+const targetDetail = labDetail || theoryDetail;
+
+      
   
       // 4. Get the batch and section info from header
       const section = sections.find((s) =>
@@ -463,7 +506,7 @@ if (targetDetail && targetDetail.Course_ID) {
       lab_rooms: formatRooms(labRooms),
       teachers: mapTeacherAssignments(),
       discipline_info: mapDisciplineInfo(),
-      locked_slots: mapLockedSlots,
+      locked_slots: mapLockedSlots(),
       disabled_days: disabledDays,
     };
   };
@@ -506,7 +549,29 @@ if (targetDetail && targetDetail.Course_ID) {
       const result = await generationService.generateTimetable(payload);
       console.log("Generation result:", result);
       setGeneratedData(result);
-      setLockedSlots([]);
+      // setLockedSlots([]);
+      const computedLockedSlots = [];
+result.timetable_headers.forEach(header => {
+  const detailsForHeader = result.timetable_details.filter(
+    d => String(d.Timetable_ID) === String(header.Timetable_ID)
+  );
+  detailsForHeader.forEach(detail => {
+    // console.log(detail)
+    if (detail.Locked) {
+      const dayIndex = getDayIndex(detail.Day);
+      const coveredSlots = getCoveredSlots(detail.Start_Time, detail.End_Time);
+      console.log(detail.Start_Time, detail.End_Time);
+      console.log("Covered slots:", coveredSlots);
+      coveredSlots.forEach(slotIndex => {
+        if (dayIndex !== -1 && slotIndex !== -1) {
+          computedLockedSlots.push(`${header.Timetable_ID}-${dayIndex}-${slotIndex}`);
+        }
+      })
+    }
+  });
+});
+console.log("Computed", computedLockedSlots)
+setLockedSlots(computedLockedSlots);
     } catch (error) {
       console.error("Generation failed:", error);
       if (error.response) {
@@ -711,6 +776,8 @@ if (targetDetail && targetDetail.Course_ID) {
   
       // Compare normalized start time
       const slotStart = normalizeTime(timeslotBoundaries[i].split("-")[0] + ":00");
+      // console.log(startTime)
+      // console.log(slotStart)
       if (normalizeTime(startTime) === slotStart) return i;
     }
     return -1; // Return -1 if no match found
@@ -746,6 +813,7 @@ const handleSaveTimetable = async (description) => {
         const detailStart = detail.Start_time || detail.Start_Time || "";
         const dayIndex = getDayIndex(detail.Day);
         const timeslotIndex = getTimeslotIndex(detailStart);
+        // console.log(detailStart)
         const slotKey = `${detail.Timetable_ID}-${dayIndex}-${timeslotIndex}`;
         const isLocked = lockedSlots.includes(slotKey);
 
