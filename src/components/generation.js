@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import TeacherTabs from "./designelements/tabforall";
-import { Box, CircularProgress } from "@mui/material";
+import { Alert, Box, CircularProgress } from "@mui/material";
 import Button from "@mui/joy/Button";
 import Timetable from "./designelements/timetable";
 
@@ -17,7 +17,16 @@ import coursePreferenceService from "./api/courseTimePreferenceService";
 import GeneratedTimetables from "./designelements/generatedTimetables";
 import GenerationDescriptionModal from "./designelements/generationDescriptionModal";
 import apiClient from "./api/apiClient";
+import CustomSnackbar from "./designelements/alert";
 
+
+const alternateDayMap = {
+  0: [2],     // Monday (0) cannot be disabled with Wednesday (2)
+  1: [3],     // Tuesday (1) cannot be disabled with Thursday (3)
+  2: [0, 4],  // Wednesday (2) cannot be disabled with Monday (0) or Friday (4)
+  3: [1],     // Thursday (3) cannot be disabled with Tuesday (1)
+  4: [2]      // Friday (4) cannot be disabled with Wednesday (2)
+};
 // A helper to normalize time strings to "HH:MM:SS" format
 const normalizeTime = (timeStr) => {
   if (!timeStr) return "";
@@ -51,6 +60,10 @@ function Generation() {
   // State for fetched data
   const [selectedGeneration, setSelectedGeneration] = useState(null);
 const [activeTab, setActiveTab] = useState(0);
+const [snackbarOpen, setSnackbarOpen] = useState(false);
+const [snackbarMessage, setSnackbarMessage] = useState("");
+const [snackbarColor, setSnackbarColor] = useState("neutral"); // neutral, success, danger, info
+
   const [teachers, setTeachers] = useState([]);
   const [rooms, setRooms] = useState([]);
   const [labRooms, setLabRooms] = useState([]);
@@ -420,25 +433,28 @@ const [activeTab, setActiveTab] = useState(0);
   
       // 3. Find the detail that covers this timeslot
       
-let labDetail = null;
-let theoryDetail = null;
-for (const detail of timetableDetails) {
-  const coveredSlots = getCoveredSlots(
-    detail.Start_time || detail.Start_Time,
-    detail.End_time || detail.End_Time
-  );
-  if (coveredSlots.includes(parseInt(timeIndex))) {
-    // Collect details by type
-    if (detail.Theory_or_Lab === "lab") {
-      labDetail = detail;
-    } else {
-      theoryDetail = detail;
-    }
-  }
-}
+      let labDetail = null;
+      let theoryDetail = null;
+      const lockedDay = dayNames[parseInt(dayIndex)]; // Convert dayIndex to day name
+      for (const detail of timetableDetails) {
+        // First check if the detail's day matches the locked day
+        if (detail.Day !== lockedDay) continue;
+        
+        const coveredSlots = getCoveredSlots(
+          detail.Start_time || detail.Start_Time,
+          detail.End_time || detail.End_Time
+        );
+        if (coveredSlots.includes(parseInt(timeIndex))) {
+          if (detail.Theory_or_Lab === "lab") {
+            labDetail = detail;
+          } else {
+            theoryDetail = detail;
+          }
+        }
+      }
 const targetDetail = labDetail || theoryDetail;
 
-      
+      console.log("TARGETTT DETAILLL", targetDetail)
   
       // 4. Get the batch and section info from header
       const section = sections.find((s) =>
@@ -501,15 +517,62 @@ if (targetDetail && targetDetail.Course_ID) {
   
   
   const mapDataForAlgorithm = () => {
+    // Helper to get discipline/year/section_index from timetable ID
+    const getDiscYearSection = (timetableId) => {
+      const header = generatedData.timetable_headers.find(
+        h => String(h.Timetable_ID) === String(timetableId) // Added closing parenthesis here
+      );
+      if (!header) return null;
+  
+      const section = sections.find(s => 
+        String(s.Section_ID) === String(header.Section_ID) // Added closing parenthesis here
+      );
+      const batch = batches.find(b => 
+        String(b.Batch_ID) === String(section?.Batch_ID || header.Batch_ID) // Added closing parenthesis here
+      );
+      
+      if (!batch) return null;
+  
+      // Calculate academic year
+      const year = currentAcademicYear - batch.Year;
+      const discipline = batch.Discipline;
+  
+      // Get section index within batch
+      const batchSections = sections.filter(s => 
+        String(s.Batch_ID) === String(batch.Batch_ID) // Added closing parenthesis here
+      );
+      const sectionIndex = batchSections.findIndex(s => 
+        String(s.Section_ID) === String(header.Section_ID)
+      );
+  
+      return { discipline, year, sectionIndex };
+    };
+  
+    // Transform disabled days format
+    const transformedDisabledDays = {};
+    Object.entries(disabledDays).forEach(([timetableId, dayIndices]) => {
+      const keyInfo = getDiscYearSection(timetableId);
+      if (!keyInfo) return;
+  
+      const dayAbbreviations = dayIndices.map(idx => 
+        ["Mon", "Tue", "Wed", "Thu", "Fri"][idx]
+      );
+      
+      const tupleKey = `(${keyInfo.discipline}, ${keyInfo.year}, ${keyInfo.sectionIndex})`;
+      transformedDisabledDays[tupleKey] = dayAbbreviations;
+      console.log("Disabled daysss",transformedDisabledDays)
+    });
+  
     return {
       rooms: formatRooms(rooms),
       lab_rooms: formatRooms(labRooms),
       teachers: mapTeacherAssignments(),
       discipline_info: mapDisciplineInfo(),
       locked_slots: mapLockedSlots(),
-      disabled_days: disabledDays,
+      disabled_days: transformedDisabledDays, // Now in correct format
     };
   };
+  
   const getCoveredSlots = (startTime, endTime) => {
     const start = normalizeTime(startTime);
     const end = normalizeTime(endTime);
@@ -634,7 +697,16 @@ setLockedSlots(computedLockedSlots);
     if (savedData && savedData.timetable_headers && savedData.timetable_details) {
       setGeneratedData(savedData);
       setIsEditing(true);
-  
+      const disabledDaysMap = {};
+      savedData.timetable_headers.forEach((header) => {
+        if (header.disabled_days) {
+          // Convert the comma-separated string of day indices back to an array of numbers (indices).
+          disabledDaysMap[header.Timetable_ID] = header.disabled_days.split(',').map(Number);
+        }
+      });
+      
+      console.log("MAPPPPPPPP",disabledDaysMap)
+      setDisabledDays(disabledDaysMap);
       // Compute locked slots based on the saved timetable details.
       const newLockedSlots = [];
       savedData.timetable_headers.forEach((header) => {
@@ -750,22 +822,90 @@ setLockedSlots(computedLockedSlots);
         : [...prev, slotKey];
       
       // For debugging
-      console.log("Current locked slots:", mapLockedSlots(newLocked));
+      // console.log("Current locked slots:", mapLockedSlots(newLocked));
       
       return newLocked;
     });
   };
 
   const handleToggleDay = (timetableId, dayIndex) => {
-    setDisabledDays((prev) => ({
-      ...prev,
-      [timetableId]: prev[timetableId]
-        ? prev[timetableId].includes(dayIndex)
-          ? prev[timetableId].filter((d) => d !== dayIndex)
-          : [...prev[timetableId], dayIndex]
-        : [dayIndex],
-    }));
+    setDisabledDays((prev) => {
+      const currentDisabled = prev[timetableId] || [];
+      const isAdding = !currentDisabled.includes(dayIndex);
+    
+      // Check constraints only when adding new disabled days
+      if (isAdding) {
+        // Constraint 1: Maximum 2 disabled days
+        if (currentDisabled.length >= 2) {
+          setSnackbarMessage("Maximum 2 days can be disabled per timetable!");
+          setSnackbarColor("danger");
+          setSnackbarOpen(true);
+                    return prev;
+        }
+    
+        // Constraint 2: No alternate days
+        const conflictingDays = currentDisabled.filter(d => 
+          alternateDayMap[dayIndex].includes(d) || 
+          alternateDayMap[d].includes(dayIndex)
+        );
+        
+        if (conflictingDays.length > 0) {
+          setSnackbarMessage("Cannot disable alternate days!");
+          setSnackbarColor("danger");
+          setSnackbarOpen(true);
+                    return prev;
+        }
+
+
+      const isLocked = lockedSlots.some(slotKey => {
+        const [lockedTimetableId, lockedDayIndex] = slotKey.split('-');
+        return (
+          String(lockedTimetableId) === String(timetableId) &&
+          parseInt(lockedDayIndex) === dayIndex
+        );
+      });
+          
+          
+      
+
+        if (isLocked) {
+          setSnackbarMessage("Cannot disable this day due to Locked Slots!");
+          setSnackbarColor("danger");
+          setSnackbarOpen(true);
+                    return prev;
+        }
+        // Check if any slot on the selected day has a hard constraint
+        const hasHardConstraint = generatedData.timetable_details.some(detail => {
+          // Check if the current timetable ID, day, and hard constraint condition matches
+          if (String(detail.Timetable_ID) === String(timetableId) && 
+              detail.Day === dayNames[dayIndex] && 
+              detail.Hard_slot)  {
+            return true;
+          }
+          return false;
+        });
+
+       
+  
+        if (hasHardConstraint) {
+          setSnackbarMessage("Cannot disable this day due to hard constraints!");
+          setSnackbarColor("danger");
+          setSnackbarOpen(true);
+                    return prev;
+        }
+       
+      }
+    
+      // Update state if valid
+      return {
+        ...prev,
+        [timetableId]: isAdding 
+          ? [...currentDisabled, dayIndex]
+          : currentDisabled.filter(d => d !== dayIndex)
+      };
+    });
   };
+  
   // Inside your Generation component (Generation.js)
  
   const getTimeslotIndex = (startTime) => {
@@ -802,7 +942,8 @@ const handleSaveTimetable = async (description) => {
           Section_ID: header.Section_ID,
           Status: timetableStatus, // "draft" or "published"
           Generation: selectedGeneration.Generation_ID, // use the existing generation id
-          // Updated_At: new Date().toISOString(), // Add timestamp
+          disabled_days: (disabledDays[header.Timetable_ID] || []).join(','),  // Join the array into a comma-separated string
+
         };
         console.log("Updating Header payload:", headerPayload);
         await generationService.updateTimetableHeader(header.Timetable_ID, headerPayload);
@@ -838,8 +979,10 @@ const handleSaveTimetable = async (description) => {
         );
       }
       setIsEditing(false)
-      alert(`Timetable ${timetableStatus} successfully updated!`);
-    } else {
+      setSnackbarMessage(`Timetable ${timetableStatus} successfully updated!`);
+      setSnackbarColor("success");
+      setSnackbarOpen(true);
+          } else {
       // Create new generation record as before
       const generationResponse = await generationService.createGeneration({ 
         Description: description,
@@ -855,7 +998,7 @@ const handleSaveTimetable = async (description) => {
           Section_ID: header.Section_ID,
           Status: timetableStatus,
           Generation: newGeneration.Generation_ID,
-          // Created_At: new Date().toISOString(), // Add timestamp
+          disabled_days: (disabledDays[header.Timetable_ID] || []).join(','),
         };
         console.log("Header payload:", headerPayload);
         const savedHeaderResponse = await generationService.saveTimetableHeader(headerPayload);
@@ -891,8 +1034,10 @@ const handleSaveTimetable = async (description) => {
           await generationService.saveTimetableDetail(detailPayload);
         }
       }
-      alert(`Timetable ${timetableStatus} successfully saved!`);
-    }
+      setSnackbarMessage(`Timetable ${timetableStatus} successfully saved!`);
+      setSnackbarColor("success");
+      setSnackbarOpen(true);
+          }
   } catch (error) {
     console.error(`Error saving/updating timetable as ${timetableStatus}:`, error);
   }
@@ -923,6 +1068,7 @@ const handleSaveTimetable = async (description) => {
       onClick={() => {
         setIsEditing(false);
         setSelectedGeneration(null);
+        window.location.reload();
         // Optionally, you may want to clear generatedData or re-fetch fresh generated data
         // setGeneratedData(null);
       }}
@@ -979,7 +1125,7 @@ const handleSaveTimetable = async (description) => {
   timetable={transformToTimetableFormat(generatedData.timetable_details, header)}
   sectionAndBatch={`${batchObj ? batchObj.Batch_name : "Unknown Batch"} - ${sectionObj ? sectionObj.Section_name : "Unknown Section"} (Room ${theoryRoomObj ? theoryRoomObj.Room_no : "N/A"})`}
   lockedSlots={lockedSlots}
-  disabledDays={disabledDays[header.Timetable_ID] || []}
+  disabledDays={disabledDays[header.Timetable_ID] || []}  // Disabled days are passed as indices
   timetableId={header.Timetable_ID}  // NEW: Pass timetable ID
   onLockSlot={(dayIndex, timeIndex) =>
     handleLockSlot(header.Timetable_ID, dayIndex, timeIndex)
@@ -987,6 +1133,15 @@ const handleSaveTimetable = async (description) => {
   onToggleDay={(dayIndex) =>
     handleToggleDay(header.Timetable_ID, dayIndex)
   }
+  disableDayTooltip={(dayIndex) => {
+    const currentDisabled = disabledDays[header.Timetable_ID] || [];
+    if (currentDisabled.length >= 2) return "Maximum 2 disabled days reached";
+    if (alternateDayMap[dayIndex].some(d => currentDisabled.includes(d))) {
+      return "Cannot disable alternate days";
+    }
+    return "Click to disable this day";
+  }}
+
 />
 
                       </div>
@@ -1041,6 +1196,13 @@ const handleSaveTimetable = async (description) => {
   onSubmit={(description) => handleSaveTimetable(description)}
   initialDescription={selectedGeneration ? selectedGeneration.Description : ""}  // Pass the existing description
 />
+<CustomSnackbar 
+  open={snackbarOpen} 
+  onClose={() => setSnackbarOpen(false)} 
+  message={snackbarMessage} 
+  color={snackbarColor} 
+/>
+
     </div>
   );
 }
