@@ -30,6 +30,9 @@ const deleteTimetableDetail = (detailId) => {
 const saveTimetableHeader = (headerPayload) => {
   return apiClient.post('/timetable-header/', headerPayload);
 };
+const getTimetableDetails = () => {
+  return apiClient.get('/timetable-detail/');
+};
 
 const saveTimetableDetail = (detailPayload) => {
   return apiClient.post('/timetable-detail/', detailPayload);
@@ -62,4 +65,5 @@ export default {
   updateGeneration,
   updateTimetableHeader,  // Add this
   updateTimetableDetail,
+  getTimetableDetails,
 };

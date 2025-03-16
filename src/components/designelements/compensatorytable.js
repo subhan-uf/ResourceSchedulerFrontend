@@ -5,12 +5,16 @@ const CompensatoryTimetable = ({
   onSlotSelect,
   sectionAndBatch,
   selectedCourse,
+  initialSelectedSlots = []
 }) => {
   // State to track the timetable
   const [timetable, setTimetable] = useState(initialTimetable);
-
+  
   // State to track selected slots for compensatory classes
   const [selectedSlots, setSelectedSlots] = useState([]);
+  useEffect(() => {
+    setSelectedSlots(initialSelectedSlots);
+  }, [initialSelectedSlots]);
 
   useEffect(() => {
     setTimetable(initialTimetable);
@@ -22,26 +26,26 @@ const CompensatoryTimetable = ({
     const isSlotSelected = selectedSlots.includes(slotKey);
 
     const updatedTimetable = [...timetable];
-    let updatedSlots = [...selectedSlots]; // Declare updatedSlots here
+    let updatedSlots = [...selectedSlots];
 
     if (isSlotSelected) {
-      // Unselect the slot
-      updatedSlots = updatedSlots.filter((key) => key !== slotKey);
-      updatedTimetable[timeIndex].days[dayIndex] = ""; // Clear the slot
-    } else if (timetable[timeIndex]?.days[dayIndex] === "") {
-      // Select the slot
-      updatedSlots = [...updatedSlots, slotKey];
-      updatedTimetable[timeIndex].days[dayIndex] = `${selectedCourse} (COMP)`; // Add course name with (COMP)
+        // Remove the slot from selection
+        updatedSlots = updatedSlots.filter(key => key !== slotKey);
+        updatedTimetable[timeIndex].days[dayIndex] = ""; // Clear COMP marker
+    } else {
+        // Add the slot to selection
+        updatedSlots = [...updatedSlots, slotKey];
+        updatedTimetable[timeIndex].days[dayIndex] = `${selectedCourse} (COMP)`;
     }
 
     setSelectedSlots(updatedSlots);
     setTimetable(updatedTimetable);
-
+    
+    // Notify parent of ALL selected slots
     if (onSlotSelect) {
-      onSlotSelect(updatedSlots); // Notify parent about the selected slots
+        onSlotSelect(updatedSlots); // Pass complete list of selected slots
     }
-  };
-
+};
   return (
     <div className="flex flex-col items-center p-4 bg-gray-100 min-h-fit">
       <h1 className="text-2xl font-bold mb-3">Select Compensatory Slots</h1>
