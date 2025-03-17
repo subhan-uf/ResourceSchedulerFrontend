@@ -146,7 +146,7 @@ const [snackbarColor, setSnackbarColor] = useState("neutral"); // neutral, succe
 
   const formatRooms = (roomsArr) =>
     roomsArr.reduce((acc, room) => {
-      acc[String(room.Room_no)] = {
+      acc[String(room.Room_ID)] = {
         floor: room.Floor,
         has_speaker: room.Speaker,
         has_multimedia: room.Multimedia,
@@ -782,9 +782,10 @@ setLockedSlots(computedLockedSlots);
         const courseName = course ? course.Course_name : "Unknown Course";
         const roomObj =
           slot.Theory_or_Lab === "lab"
-            ? labRooms.find((r) => String(r.Room_no) === String(slot.Room_ID))
-            : rooms.find((r) => String(r.Room_no) === String(slot.Room_ID));
+            ? labRooms.find((r) => String(r.Room_ID) === String(slot.Room_ID))
+            : rooms.find((r) => String(r.Room_ID) === String(slot.Room_ID));
         const room = roomObj ? roomObj.Room_no : "N/A";
+        console.log("ROOOm",roomObj)
         let displayText = courseName;
         if (slot.Theory_or_Lab === "lab") {
           displayText += ` (LAB - ${room})`;
@@ -1112,7 +1113,7 @@ const handleSaveTimetable = async (description) => {
                   );
                   const theoryRoomId = theoryDetail ? theoryDetail.Room_ID : null;
                   const theoryRoomObj = rooms.find(
-                    (r) => String(r.Room_no) === String(theoryRoomId)
+                    (r) => String(r.Room_ID) === String(theoryRoomId)
                   );
                   
                   return (

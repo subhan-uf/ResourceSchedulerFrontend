@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import TeacherTabs from "./designelements/tabforall";
 import Tables from "./designelements/tables";
 import TextField from '@mui/material/TextField';
@@ -56,6 +56,10 @@ const [isEditing, setIsEditing] = useState(false);  // State to track whether we
 const [snackbarOpen, setSnackbarOpen] = useState(false);
 const [snackbarMessage, setSnackbarMessage] = useState("");
 const [snackbarColor, setSnackbarColor] = useState("neutral"); 
+const viewAvailableSlotsButtonRef = useRef(null);
+const [selectedWeek, setSelectedWeek] = useState("");
+const [selectedDay, setSelectedDay] = useState("Monday");
+
 useEffect(() => {
     if (!isEditing) {
       setSelectedBatch("");
@@ -69,13 +73,10 @@ useEffect(() => {
   }, [isEditing]);
   
   useEffect(() => {
-    if (selectedDate && sectionTimetableDetails.length > 0) {
-      const timer = setTimeout(() => {
-        handleViewAvailableRooms();
-      }, 100);
-      return () => clearTimeout(timer);
+    if (selectedWeek && sectionTimetableDetails.length > 0) {
+      handleViewAvailableRooms();
     }
-  }, [sessionType, selectedDate, sectionTimetableDetails, isEditing]);// Ensure to call the function when sessionType or other dependencies change
+  }, [sessionType, selectedWeek, sectionTimetableDetails]);// Ensure to call the function when sessionType or other dependencies change
   useEffect(() => {
     // Clear selections when room changes
     setSelectedSlots([]);
@@ -101,7 +102,7 @@ useEffect(() => {
             setCompRecords(response.data);
           } catch (error) {
             console.error("Error fetching compensatory records:", error);
-            alert("Error fetching compensatory records from the database.");
+            showSnackbar("Error fetching compensatory records from the database.", "danger")
           }
         }
       
@@ -195,18 +196,24 @@ useEffect(() => {
         setDescription("");
         setSelectedDate(""); 
         setSessionType("lab"); // Reset session type to default (Lab)
-    };
-    
+        setSelectedDay("");
+      };
+      const handleFieldChange = () => {
+        setShowTimetable(false); // Hide timetable when any field is changed
+      };
       const handleDeleteConfirm = async () => {
         try {
           await CompensatoryService.deleteCompensatory(selectedCompId);
           const response = await CompensatoryService.getAllCompensatory();
           setCompRecords(response.data);
           setDeleteOpen(false);
-          alert('Record deleted successfully!');
+
+          showSnackbar("Record deleted successfully!", "success")
         } catch (error) {
           console.error('Error deleting record:', error);
-          alert('Error deleting record');
+          
+          showSnackbar("Error deleting record", "danger")
+
         }
       };
       const handleEditClick = async (compId) => {
@@ -220,10 +227,10 @@ useEffect(() => {
     setSelectedSection(Number(data.Section_ID));
     setSelectedCourse(Number(data.Course_ID));
     setDescription(data.Desc);
-    setSelectedDate(data.Date);
+    setSelectedWeek(Number(data.Week_number));
     setSessionType(data.Lab_or_Theory.toLowerCase());
     setSelectedRoom(Number(data.Room_ID).toString());
-         
+    setSelectedDay(data.day);
     const assignments = await fetchTeacherAssignments(Number(data.Teacher_ID));
     
     // Process sections after assignments are loaded
@@ -248,8 +255,9 @@ useEffect(() => {
         //   });
         handleViewAvailableRooms();
 
-          const dayName = new Date(data.Date).toLocaleDateString("en-US", { weekday: 'long' });
-          const dayIndex = getDayIndex(dayName);
+          // const dayName = new Date(data.Date).toLocaleDateString("en-US", { weekday: 'long' });
+          const dayIndex = getDayIndex(data.day);
+         
           const timeSlotIndex = getTimeSlotIndex(data.Start_time, data.End_time);
           
           if (dayIndex !== -1 && timeSlotIndex !== -1) {
@@ -273,6 +281,11 @@ useEffect(() => {
           setTimeout(() => {
             document.querySelector('[role="tab"]:nth-child(2)').click();
           }, 100);
+          setTimeout(() => {
+            if (viewAvailableSlotsButtonRef.current) {
+              viewAvailableSlotsButtonRef.current.click();
+            }
+          }, 100);
           setEditingId(compId);
           setIsEditing(true);  // Set editing mode to true
 
@@ -283,12 +296,17 @@ useEffect(() => {
           document.querySelector('[role="tab"]:nth-child(2)').click();
         } catch (error) {
           console.error('Error fetching record for edit:', error);
-          alert('Error loading record for editing');
+          showSnackbar("Error loading record for editing", "danger")
         }
       };
       
       const handleSlotSelect = (slots) => {
         // Define all possible time slots
+        if (slots.length > 0) {
+          const [dayIndex] = slots[0].split('-').map(Number);
+          const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
+          setSelectedDay(days[dayIndex]);
+        }
         const timeSlots = [
             { start: "08:30", end: "09:20" },
             { start: "09:20", end: "10:10" },
@@ -316,11 +334,12 @@ useEffect(() => {
         if (selectedCourse) {
             setShowTimetable(true); // Show timetable if course is selected
         } else {
-            alert("Please select a course before viewing available slots.");
+            showSnackbar("Please select a course before viewing available slots.", "danger")
         }
     };
 
-    const sectionAndBatch = "Section-B Batch 2021";
+    const sectionAndBatch = `${sessionType.charAt(0).toUpperCase() + sessionType.slice(1)} Room ${roomLookup[selectedRoom]?.Room_no || ''}`;
+    console.log("ROOM",roomLookup[selectedRoom])
     const TimetableData = [
         { time: "08:30 - 09:20", days: ["", "DWH", "", "NLP", ""] },
         { time: "09:20 - 10:10", days: ["", "NLP", "", "NIS", ""] },
@@ -332,7 +351,7 @@ useEffect(() => {
         { time: "03:40 - 04:30", days: ["", "", "", "", ""] },
     ];
 
-    const tableHeadings = ['Teacher name', 'Course Name', 'Section', 'Room number', 'Date', 'Start time', 'End time','Session Type' ,'Status', 'Description', 'Actions'];
+    const tableHeadings = ['Teacher name', 'Course Name', 'Section', 'Room number','Day' ,'Week', 'Start time', 'End time','Session Type' ,'Status', 'Description', 'Actions'];
 
     // Map compensatory records from API to table rows
     const tableRows = compRecords.map((record) => [
@@ -340,7 +359,8 @@ useEffect(() => {
         courseLookup[record.Course_ID] ? courseLookup[record.Course_ID].Course_name : "N/A",
         sectionLookup[record.Section_ID] ? sectionLookup[record.Section_ID].Section_name : "N/A",
         roomLookup[record.Room_ID] ? roomLookup[record.Room_ID].Room_no : "N/A",
-        record.Date,
+        record.day,
+        record.Week_number,
         record.Start_time,
         record.End_time,
         record.Lab_or_Theory || "N/A", 
@@ -371,8 +391,9 @@ useEffect(() => {
       }
       
       const handleViewRoomSlots = async () => {
-        if (!selectedRoom || !selectedDate) {
-            alert("Select both a room and a date.");
+        if (!selectedRoom || !selectedWeek) {
+            
+            showSnackbar("Please select a room and a week.", "danger")
             return;
         }
     
@@ -382,7 +403,7 @@ useEffect(() => {
             const response = await generationService.getTimetableDetails({
                 roomID: selectedRoom,
                 day: dayName,
-                date: selectedDate,
+                date: selectedWeek,
             });
     
             // console.log(response.data);
@@ -429,7 +450,31 @@ useEffect(() => {
                     }
                 });
             });
+            compRecords.forEach(compRecord => {
+              const startTime = compRecord.Start_time;
+              const endTime = compRecord.End_time;
+              
+              const sanitizedDay = compRecord.day.trim();
+              
+              // Get day index
+              const dayIndex = getDayIndex(sanitizedDay);
             
+              // Get time slot index
+              const timesToAdd = splitTimeIntoSlots(startTime, endTime);
+              timesToAdd.forEach(slot => {
+                const timeSlotIndex = getTimeSlotIndex(slot.start, slot.end);
+                
+                if (timeSlotIndex !== -1 && dayIndex !== -1) {
+                  // Only add the compensatory class to the timetable if its status is Pending
+                  if (compRecord.Status === "Pending") {
+                    const courseName = courseLookup[compRecord.Course_ID]?.Course_name || "";
+                    formattedTimetable[timeSlotIndex].days[dayIndex] = `${courseName} (COMP)`;
+                  }
+                }
+              });
+            });
+            
+            console.log(compRecords)
     
             console.log("Formatted Timetable:", filteredDetails);
     
@@ -439,7 +484,8 @@ useEffect(() => {
     
         } catch (error) {
             console.error("Error fetching timetable details for room", error);
-            alert("Error fetching timetable details.");
+         
+            showSnackbar("Error fetching timetable details.", "danger")
         }
     };
     
@@ -541,6 +587,7 @@ const getDayIndex = (day) => {
         "Thursday": 3,
         "Friday": 4,
         "Saturday": 5, // Added Saturday
+        
     };
 
     // Log the day and its corresponding index for debugging
@@ -564,9 +611,13 @@ const getDayIndex = (day) => {
 
     const handleSubmit = async (event) => {
         event.preventDefault();
-      
+        if (!selectedDay) {
+          showSnackbar("Please select a day by choosing slots","danger")
+          return;
+        }
         if (roomSlots.length === 0) {
-          alert("Please select at least one time slot");
+          showSnackbar("Please select at least one time slot","danger")
+
           return;
         }
       
@@ -578,7 +629,8 @@ const getDayIndex = (day) => {
               Course_ID: selectedCourse,
               Room_ID: selectedRoom,
               Batch_ID: selectedBatch,
-              Date: selectedDate,
+              day: selectedDay,
+              Week_number: Number(selectedWeek),
               Start_time: roomSlots[0].start,
               End_time: roomSlots[0].end,
               Status: "Pending",
@@ -590,7 +642,7 @@ const getDayIndex = (day) => {
             
             await CompensatoryService.updateCompensatory(editingId, dataToSend);
             setEditingId(null);
-            alert('Record updated successfully!');
+            showSnackbar("Record updated successfully!", "success")
           } else {
             // Create new records
             const submissions = roomSlots.map(slot => {
@@ -599,7 +651,8 @@ const getDayIndex = (day) => {
                 Course_ID: selectedCourse,
                 Room_ID: selectedRoom,
                 Batch_ID: selectedBatch,
-                Date: selectedDate,
+                day: selectedDay,
+                Week_number: Number(selectedWeek),
                 Start_time: slot.start,
                 End_time: slot.end,
                 Status: "Pending",
@@ -608,20 +661,24 @@ const getDayIndex = (day) => {
                 Lab_or_Theory: sessionType,  // Include the session type in the payload
 
               };
+              console.log(dataToSend)
               return CompensatoryService.createCompensatory(dataToSend);
             });
             
             await Promise.all(submissions);
-            alert('All slots submitted successfully!');
+            showSnackbar("Compensatory Class(es) booked successfully!", "success")
           }
       
           // Refresh data and reset form
           const response = await CompensatoryService.getAllCompensatory();
           setCompRecords(response.data);
           resetForm();
-        } catch (error) {
+          window.location.reload();
+        } 
+        
+        catch (error) {
           console.error('Error submitting form:', error);
-          alert(`Error ${editingId ? 'updating' : 'submitting'} record(s)`);
+          showSnackbar(`Error ${editingId ? 'updating' : 'submitting'} record(s)`, "danger")
         }
       };
       
@@ -652,13 +709,7 @@ const getDayIndex = (day) => {
       };
       
       const handleViewAvailableRooms = () => {
-        if (!selectedDate && !isEditing) {
-          showSnackbar("Please select a date first", "danger")
-          return;
-        }
-        const targetDate = isEditing ? selectedDate : new Date().toISOString().split('T')[0];
-        // console.log("Section Timetable Details:", sectionTimetableDetails)
-        
+       
         // Determine the day name from the selected date (e.g., "Monday")
         const dayName = new Date(selectedDate).toLocaleDateString("en-US", { weekday: 'long' });
         
@@ -774,6 +825,7 @@ const getDayIndex = (day) => {
     setSelectedTeacher(selectedValue);
     if (!selectedValue) {
       // Clear all dependent selections if teacher is unselected
+      handleFieldChange()
       setTeacherAssignments([]);
       setTeacherBatches([]);
       setSelectedBatch("");
@@ -805,6 +857,7 @@ const getDayIndex = (day) => {
     })}
     value={selectedBatch}
     onChange={(selectedValue) => {
+      handleFieldChange()
       setSelectedBatch(selectedValue);
       if (!selectedValue) {
         // Clear sections if batch is unselected
@@ -841,6 +894,7 @@ const getDayIndex = (day) => {
   })}
   value={selectedSection}
   onChange={(selectedValue) => {
+    handleFieldChange()
     setSelectedSection(selectedValue);
     // When section changes, clear any room selections
     setAvailableRooms([]);
@@ -869,6 +923,7 @@ const getDayIndex = (day) => {
   })}
   value={selectedCourse}
   onChange={(selectedValue) => {
+    handleFieldChange()
     setSelectedCourse(selectedValue);
     console.log("Selected Course:", selectedValue);
   }}
@@ -890,19 +945,19 @@ const getDayIndex = (day) => {
 
 
 <FormControl fullWidth required>
-    <TextField
-      label="Select Date"
-      type="date"
-      value={selectedDate}
-      onChange={(event) => {
-        setSelectedDate(event.target.value);
-        // When the date changes, clear room-related selections
-        setAvailableRooms([]);
-        setSelectedRoom("");
-        setRoomSlots([]);
-      }}
+  <Singledropdown
+    label="Select Week"
+    menuItems={Array.from({length: 15}, (_, i) => ({
+      label: `Week ${i+1}`,
+      value: i+1,
+    }))}
+    value={selectedWeek}
+    onChange={(selectedValue) => {
+      handleFieldChange()
+      setSelectedWeek(selectedValue)}
+    }
       required
-    />
+  />
 </FormControl>
 
 
@@ -911,8 +966,11 @@ const getDayIndex = (day) => {
   options={['Lab', 'Theory']}
   icons={[<ComputerIcon />, <MenuBookIcon />]}
   value={sessionType}
-  onChange={(value) => setSessionType(value.toLowerCase())}
-  required
+  onChange={(value) => {
+    handleFieldChange()
+    setSessionType(value.toLowerCase())}
+  
+    }  required
 />
 
 
@@ -925,10 +983,11 @@ const getDayIndex = (day) => {
           label="Available Rooms"
           menuItems={availableRooms.map(room => ({
             label: room.Room_no, // Ensure this property is used
-            value: room.Room_no,
+            value: room.Room_ID,
           }))}
           value={selectedRoom}
           onChange={(selectedValue) => {
+            handleFieldChange()
             setSelectedRoom(selectedValue);
             setRoomSlots([]);
           }}
@@ -937,9 +996,9 @@ const getDayIndex = (day) => {
       </FormControl>
     )}
     {selectedRoom && (
-      <Button variant="contained" color="secondary" onClick={handleViewRoomSlots}>
-        View available slots in room {selectedRoom}
-      </Button>
+      <Button variant="contained" color="secondary" onClick={handleViewRoomSlots} ref={viewAvailableSlotsButtonRef}>
+  View available slots in room {roomLookup[selectedRoom]?.Room_no || 'N/A'}
+  </Button>
     )}
 {selectedRoom && showTimetable && (
   <Box sx={{ mt: 2, width: '100%' }}>

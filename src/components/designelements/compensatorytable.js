@@ -5,7 +5,8 @@ const CompensatoryTimetable = ({
   onSlotSelect,
   sectionAndBatch,
   selectedCourse,
-  initialSelectedSlots = []
+  initialSelectedSlots = [],
+  
 }) => {
   // State to track the timetable
   const [timetable, setTimetable] = useState(initialTimetable);
@@ -24,7 +25,14 @@ const CompensatoryTimetable = ({
   const handleSlotClick = (dayIndex, timeIndex) => {
     const slotKey = `${dayIndex}-${timeIndex}`;
     const isSlotSelected = selectedSlots.includes(slotKey);
+    const currentSlotValue = timetable[timeIndex].days[dayIndex];
 
+    const currentSlotContent = timetable[timeIndex].days[dayIndex];
+  
+    // Prevent selection if slot is already occupied
+    if (!isSlotSelected && currentSlotValue && currentSlotValue !== `${selectedCourse} (COMP)`) {
+      return;
+    }
     const updatedTimetable = [...timetable];
     let updatedSlots = [...selectedSlots];
 
@@ -81,64 +89,63 @@ const CompensatoryTimetable = ({
 
         {/* Table Body */}
         <tbody>
-          {timetable.map((row, timeIndex) => (
-            <>
-              {/* Add Break Row */}
-              {timeIndex === 3 && (
-                <tr key="break-row">
-                  <td className="border border-gray-400 px-4 py-2 font-bold text-center text-xs">
-                    11:00 - 11:30
-                  </td>
-                  <td
-                    colSpan={6} // Adjust for six days
-                    className="border border-gray-400 px-4 py-2 text-center font-bold bg-gray-100"
-                  >
-                    Break
-                  </td>
-                </tr>
-              )}
-              {/* Add Salah Break Row */}
-              {timeIndex === 5 && (
-                <tr key="salah-break-row">
-                  <td className="border border-gray-400 px-4 py-2 font-bold text-center text-xs">
-                    01:10 - 02:00
-                  </td>
-                  <td
-                    colSpan={6} // Adjust for six days
-                    className="border border-gray-400 px-4 py-2 text-center font-bold bg-gray-100"
-                  >
-                    Salah Break
-                  </td>
-                </tr>
-              )}
-              <tr key={timeIndex}>
-              <td className="border border-gray-400 px-4 py-2 font-bold text-center text-xs">
+        {(timetable || []).map((row, timeIndex) => (
+    <React.Fragment key={timeIndex}> {/* Add key here */}
+      {/* Add Break Row */}
+      {timeIndex === 3 && (
+        <tr key={`break-${timeIndex}`}> {/* Unique key */}
+          <td className="border border-gray-400 px-4 py-2 font-bold text-center text-xs">
+            11:00 - 11:30
+          </td>
+          <td
+            colSpan={6}
+            className="border border-gray-400 px-4 py-2 text-center font-bold bg-gray-100"
+          >
+            Break
+          </td>
+        </tr>
+      )}
+      {/* Add Salah Break Row */}
+      {timeIndex === 5 && (
+        <tr key={`salah-${timeIndex}`}> {/* Unique key */}
+          <td className="border border-gray-400 px-4 py-2 font-bold text-center text-xs">
+            01:10 - 02:00
+          </td>
+          <td
+            colSpan={6}
+            className="border border-gray-400 px-4 py-2 text-center font-bold bg-gray-100"
+          >
+            Salah Break
+          </td>
+        </tr>
+      )}
+      <tr key={timeIndex}>
+        <td className="border border-gray-400 px-4 py-2 font-bold text-center text-xs">
+          {row.time}
+        </td>
+        {(row.days || []).map((slot, dayIndex) => (
+          <td
+            key={dayIndex} // Already unique within this row
+            role="button"
+            className={`border px-4 py-2 text-center ${
+              selectedSlots.includes(`${dayIndex}-${timeIndex}`)
+                ? "bg-green-200 border-green-600 cursor-pointer"
+                : timetable[timeIndex].days[dayIndex]
+                ? "bg-gray-200 cursor-not-allowed"
+                : "bg-white border-gray-400 cursor-pointer"
+            }`}
+            onClick={() => handleSlotClick(dayIndex, timeIndex)}
+          >
+            {timetable[timeIndex].days[dayIndex] || 
+              (selectedSlots.includes(`${dayIndex}-${timeIndex}`) ? `${selectedCourse} (COMP)` : "")
+            }
+          </td>
+        ))}
+      </tr>
+    </React.Fragment>
+  ))}
+</tbody>
 
-                  {row.time}
-                </td>
-                {row.days.map((slot, dayIndex) => {
-                  const slotKey = `${dayIndex}-${timeIndex}`;
-                  const isSelected = selectedSlots.includes(slotKey);
-
-                  return (
-                    <td
-                      key={dayIndex}
-                      role="button"
-                      className={`border px-4 py-2 text-center cursor-pointer ${
-                        isSelected
-                          ? "bg-green-200 border-green-600"
-                          : "bg-white border-gray-400"
-                      }`}
-                      onClick={() => handleSlotClick(dayIndex, timeIndex)}
-                    >
-                      {slot || (isSelected ? `${selectedCourse} (COMP)` : "")}
-                    </td>
-                  );
-                })}
-              </tr>
-            </>
-          ))}
-        </tbody>
       </table>
       
      
