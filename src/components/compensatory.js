@@ -450,30 +450,35 @@ useEffect(() => {
                     }
                 });
             });
-            compRecords.forEach(compRecord => {
-              const startTime = compRecord.Start_time;
-              const endTime = compRecord.End_time;
-              
-              const sanitizedDay = compRecord.day.trim();
-              
-              // Get day index
-              const dayIndex = getDayIndex(sanitizedDay);
-            
-              // Get time slot index
-              const timesToAdd = splitTimeIntoSlots(startTime, endTime);
-              timesToAdd.forEach(slot => {
-                const timeSlotIndex = getTimeSlotIndex(slot.start, slot.end);
-                
-                if (timeSlotIndex !== -1 && dayIndex !== -1) {
-                  // Only add the compensatory class to the timetable if its status is Pending
-                  if (compRecord.Status === "Pending") {
-                    const courseName = courseLookup[compRecord.Course_ID]?.Course_name || "";
-                    formattedTimetable[timeSlotIndex].days[dayIndex] = `${courseName} (COMP)`;
-                  }
-                }
-              });
-            });
-            
+// Before:
+compRecords.forEach(compRecord => {
+  // ... existing code ...
+});
+
+// After:
+compRecords
+  .filter(compRecord => 
+    Number(compRecord.Room_ID) === Number(selectedRoom) && 
+    compRecord.Status === "Pending" &&
+    Number(compRecord.Week_number) === Number(selectedWeek)
+
+  )
+  .forEach(compRecord => {
+    const startTime = compRecord.Start_time;
+    const endTime = compRecord.End_time;
+    
+    const sanitizedDay = compRecord.day.trim();
+    const dayIndex = getDayIndex(sanitizedDay);
+    const timesToAdd = splitTimeIntoSlots(startTime, endTime);
+
+    timesToAdd.forEach(slot => {
+      const timeSlotIndex = getTimeSlotIndex(slot.start, slot.end);
+      if (timeSlotIndex !== -1 && dayIndex !== -1) {
+        const courseName = courseLookup[compRecord.Course_ID]?.Course_name || "";
+        formattedTimetable[timeSlotIndex].days[dayIndex] = `${courseName} (COMP)`;
+      }
+    });
+  });
             console.log(compRecords)
     
             console.log("Formatted Timetable:", filteredDetails);
@@ -770,7 +775,7 @@ const getDayIndex = (day) => {
           
           // Filter headers to only those that have Section_ID matching the selected section
           const filteredHeaders = headers.filter(
-            header => String(header.Section_ID) === String(sectionID)
+            header => String(header.Section_ID) === String(sectionID) && header.Status==="published"
           );
           
           // Extract the Timetable_IDs from these headers

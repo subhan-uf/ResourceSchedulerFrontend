@@ -30,7 +30,10 @@ const CompensatoryTimetable = ({
     const currentSlotContent = timetable[timeIndex].days[dayIndex];
   
     // Prevent selection if slot is already occupied
-    if (!isSlotSelected && currentSlotValue && currentSlotValue !== `${selectedCourse} (COMP)`) {
+    // if (!isSlotSelected && currentSlotValue && currentSlotValue !== `${selectedCourse} (COMP)`) {
+    //   return;
+    // }
+    if (!isSlotSelected && currentSlotValue ) {
       return;
     }
     const updatedTimetable = [...timetable];
