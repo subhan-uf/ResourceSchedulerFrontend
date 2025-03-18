@@ -22,6 +22,7 @@ import generationService from "./api/generationService";
 import apiClient from "./api/apiClient";
 import AlertDialogModal from "./designelements/modal";
 import CustomSnackbar from "./designelements/alert";
+import ViewCompensatoryTimetable from "./designelements/ViewCompensatoryTimetable";
 
 function Compensatory() {
     const [selectedSlots, setSelectedSlots] = useState([]);
@@ -59,6 +60,9 @@ const [snackbarColor, setSnackbarColor] = useState("neutral");
 const viewAvailableSlotsButtonRef = useRef(null);
 const [selectedWeek, setSelectedWeek] = useState("");
 const [selectedDay, setSelectedDay] = useState("Monday");
+// In Compensatory component (top-level state declarations)
+const [showViewTimetable, setShowViewTimetable] = useState(false);
+const [allTimetableDetails, setAllTimetableDetails] = useState([]);
 
 useEffect(() => {
     if (!isEditing) {
@@ -1047,25 +1051,74 @@ const getDayIndex = (day) => {
                 </Box>
             </form>
         </div>,
-        <div>
-            <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
-                <Box sx={{ width: '100%', maxWidth: 300 }}>
-                <RadioButton
-  label="Select session type"
-  options={['Lab', 'Theory']}
-  icons={[<ComputerIcon />, <MenuBookIcon />]}  // Optional icons
-  onChange={(value) => setSessionType(value.toLowerCase())} // Update state
-  required
-/>
+        // Third Tab Content (View-only timetable)
+<div>
+<Box sx={{ maxWidth: 700, margin: '0 auto' }}> 
+  <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
+    <Box sx={{ width: '100%', maxWidth: 200 }}>
+      <RadioButton
+        label="Select session type"
+        options={['Lab', 'Theory']}
+        icons={[<ComputerIcon />, <MenuBookIcon />]}
+        value={sessionType}
+        onChange={(value) => {
+          setSessionType(value.toLowerCase());
+          // Optionally reset view state if needed
+          setShowViewTimetable(false);
+        }}
+        required
+      />
+    </Box>
+  </Box>
+  <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2, marginRight:'auto', marginLeft: 'auto', maxWidth: 400 }}>
+    <FormControl fullWidth required>
+      <Singledropdown
+        label="Select Week"
+        menuItems={Array.from({ length: 15 }, (_, i) => ({
+          label: `Week ${i + 1}`,
+          value: i + 1,
+        }))}
+        value={selectedWeek}
+        onChange={(selectedValue) => {
+          setSelectedWeek(selectedValue);
+          setShowViewTimetable(false); // reset view if week changes
+        }}
+        required
+      />
+    </FormControl>
+  </Box>
+  <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
+  <Button variant="contained" onClick={async () => {
+   const resp = await generationService.getTimetableDetails({ date: selectedWeek });
+   setAllTimetableDetails(resp.data);
+  setShowViewTimetable(true);
+ }}>      Display
+    </Button>
+  </Box>
+  {showViewTimetable && (
+    <Box sx={{ mt: 2 }}>
+      <ViewCompensatoryTimetable
+        compRecords={compRecords}
+        courses={courses}
+        // Filter rooms based on session type:
+        rooms={rooms.filter(room => {
+          if (sessionType === 'lab') {
+            return room.Room_type.toLowerCase() === 'lab';
+          } else if (sessionType === 'theory') {
+            return room.Room_type.toLowerCase() === 'classroom';
+          }
+          return false;
+        })}
+        timetableDetails={allTimetableDetails}
+        selectedSessionType={sessionType}
+        selectedWeek={selectedWeek}
+      />
+    </Box>
+  )}
+  </Box>
+</div>
 
-                </Box>
-            </Box>
-
-            <Box sx={{ gridColumn: 'span 2', display: 'flex', justifyContent: 'center', mt: 2 }}>
-                <Box sx={{ width: '100%', maxWidth: 800, height: 200, border: '1px solid #ccc', borderRadius: 2 }} />
-            </Box>
-            
-        </div>,
+        ,
     ];
 
     return (
