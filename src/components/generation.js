@@ -927,28 +927,16 @@ setLockedSlots(computedLockedSlots);
 const handleSaveTimetable = async (description) => {
   try {
     if (timetableStatus === "published") {
-      // Fetch all timetable header records
       const headersResponse = await apiClient.get('/timetable-header/');
-      const allHeaders = headersResponse.data;
-      
-      // Create a Set to hold generation IDs that have at least one published header.
-      const publishedGenerations = new Set();
-      // For each header, if its status is "published", add its Generation value.
-      allHeaders.forEach(header => {
-        if (header.Status === "published") {
-          publishedGenerations.add(header.Generation);
-        }
-      });
-      
-      // If there's already any published timetable in any generation,
-      // then block publishing.
-      if (publishedGenerations.size > 0) {
+      const alreadyPublished = headersResponse.data.some(header => header.Status === "published");
+      if (alreadyPublished) {
         setSnackbarMessage("You can only publish 1 timetable.");
         setSnackbarColor("danger");
         setSnackbarOpen(true);
         return;
       }
     }
+    
     if (isEditing && selectedGeneration) {
       // Update the generation record
       const updatePayload = { 
