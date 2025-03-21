@@ -1,10 +1,20 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import TeacherTabs from "./designelements/tabforall";
 import Tablereport from "./designelements/tablereport";
 import { Box } from "@mui/material";
 import { PdfGenerator } from "./designelements/PdfGenerator";
-
+import generationService from "./api/generationService";
+import BatchService from "./api/batchService";
+import SectionService from "./api/sectionService";
+import CourseService from "./api/courseService";
+import RoomService from "./api/roomService";
+import apiClient from "./api/apiClient";
+import teacherService from "./api/teacherService";
+import { CircularProgress } from "@mui/material";
 // Predefined timetable structure with breaks
+
+
+  
 const TIMETABLE_STRUCTURE = [
     { time: "08:30 - 09:20", isBreak: false },
     { time: "09:20 - 10:10", isBreak: false },
@@ -17,7 +27,105 @@ const TIMETABLE_STRUCTURE = [
     { time: "02:50 - 03:40", isBreak: false },
     { time: "03:40 - 04:30", isBreak: false }
 ];
+const fetchTimetableData = async () => {
+    try {
+      const { data: headers } = await apiClient.get('/timetable-header/');
+      const { data: details } = await generationService.getTimetableDetails();
+      const { data: allCourses } = await CourseService.getAllCourses();
+      const courseMap = Object.fromEntries(allCourses.map(c => [c.Course_ID, c]));
+  
+      const dataDict = {};
+  
+      for (let header of headers) {
+        const { data: batch } = await BatchService.getBatchById(header.Batch_ID);
+        const { data: section } = await SectionService.getSectionById(header.Section_ID);
+  
+        const discipline = batch.Batch_name.slice(0,4);
+        const batchKey = batch.Year;
+        const sectionKey = section.Section_name;
+  
+        dataDict[discipline] ??= {};
+        dataDict[discipline][batchKey] ??= {};
+        dataDict[discipline][batchKey][sectionKey] ??= { room: '', courses: [], courseData: [] };
+  
+        const sectionDetails = details.filter(d => d.Timetable_ID === header.Timetable_ID);
+        if (sectionDetails.length) {
+          const { data: room } = await RoomService.getRoomById(sectionDetails[0].Room_ID);
+          dataDict[discipline][batchKey][sectionKey].room = room.Room_no;
+        }
+  
+        // Group details by Course_ID
+        const grouped = sectionDetails.reduce((acc, d) => {
+          acc[d.Course_ID] ??= [];
+          acc[d.Course_ID].push(d);
+          return acc;
+        }, {});
+  
+        // Build course objects
+        const courseArray = [];
+        for (const [courseId, slots] of Object.entries(grouped)) {
+          const course = courseMap[courseId];
+          const theoryDetail = slots.find(s => s.Theory_or_Lab === 'theory');
+          const labDetail = slots.find(s => s.Theory_or_Lab === 'lab');
+        
+          const theoryTeacher = theoryDetail
+            ? (await teacherService.getTeacherById(theoryDetail.Teacher_ID)).data.Name
+            : '';
+          const labTeacher = labDetail
+            ? (await teacherService.getTeacherById(labDetail.Teacher_ID)).data.Name
+            : '';
+        
+          const labRoomNo = labDetail
+            ? (await RoomService.getRoomById(labDetail.Room_ID)).data.Room_no
+            : null;
+            
+          courseArray.push({
+            code: course.Course_code,
+            fullName: course.Course_fullname,
+            shortForm: course.Course_code,
+            creditHours: course.Credit_hours,
+            labHours: course.Is_Lab ? 1 : 0,
+            teachers: { theory: theoryTeacher, lab: labTeacher },
+            labNumber: parseInt(labRoomNo, 10),
 
+
+
+
+
+
+            slots: slots.flatMap(s => {
+                const start = s.Start_time.slice(0,5);
+                const end = s.End_time.slice(0,5);
+                const periods = TIMETABLE_STRUCTURE.filter(slot => !slot.isBreak);
+                const startIndex = periods.findIndex(p => p.time.startsWith(start));
+                const endIndex = periods.findIndex(p => p.time.endsWith(end));
+              
+                if (startIndex >= 0 && endIndex >= startIndex) {
+                  return periods.slice(startIndex, endIndex + 1).map(p => ({
+                    time: p.time,
+                    days: [ {"Monday":0,"Tuesday":1,"Wednesday":2,"Thursday":3,"Friday":4,"Saturday":5}[s.Day] ],
+                    type: s.Theory_or_Lab
+                  }));
+                }
+                return [];
+              })
+              
+          });
+        }
+        console.log("ARRAY",courseArray)
+        dataDict[discipline][batchKey][sectionKey].courses = courseArray;
+        dataDict[discipline][batchKey][sectionKey].courseData = courseArray;
+                
+      }
+  
+      return dataDict;
+    }
+    catch(err) {
+      console.error(err);
+      throw err;
+    }
+  };
+  
 // Enhanced course data structure
 const COURSE_DATA = {
     "BSCS": {
@@ -83,54 +191,66 @@ const COURSE_DATA = {
 
 
 function Report() {
+    const [timetableDict, setTimetableDict] = useState({});
+    const [loading, setLoading] = useState(true);
+    useEffect(() => {
+      setLoading(true);
+        fetchTimetableData()
+          .then(data => setTimetableDict(data))
+          .catch(error => console.error("Failed to fetch timetable data", error))
+          .finally(() => setLoading(false));
+        }, []);
     const handleView = (row) => {
         generatePdf(row.Batch);
     };
+    console.log(timetableDict)
 
-    const generatePdf = (batchName) => {
-        const batchData = COURSE_DATA[batchName];
+    const generatePdf = (discipline) => {
+        if (!timetableDict[discipline]) {
+          console.error("No data found for", discipline);
+          return;
+        }
         const timetables = [];
-    
-        Object.entries(batchData).forEach(([year, yearSections]) => {
-            Object.entries(yearSections).forEach(([sectionName, sectionData]) => {
-                const courseSlots = {};
-                TIMETABLE_STRUCTURE.forEach(slot => {
-                    if (!slot.isBreak) courseSlots[slot.time] = Array(6).fill('');
-                });
-    
-                sectionData.courses.forEach(course => {
-                    course.slots.forEach(slot => {
-                        if (courseSlots[slot.time]) {
-                            slot.days.forEach(dayIdx => {
-                                const suffix = slot.type === 'lab' ? ` (Lab ${course.labNumber})` : '';
-                                courseSlots[slot.time][dayIdx] = `${course.shortForm}${suffix}`;
-                            });
-                        }
-                    });
-                });
-    
-                timetables.push({
-                    batch: `${batchName} ${year}`,
-                    section: sectionName,
-                    room: sectionData.room,
-                    structure: TIMETABLE_STRUCTURE,
-                    courses: courseSlots,
-                    courseData: sectionData.courses
-                });
+        // timetableDict[discipline] is an object with keys as batch names (e.g. "2021")
+        Object.entries(timetableDict[discipline]).forEach(([batchName, sectionsObj]) => {
+          Object.entries(sectionsObj).forEach(([sectionName, sectionData]) => {
+            const courseMatrix = {};
+TIMETABLE_STRUCTURE.forEach(slot => {
+  if (!slot.isBreak) courseMatrix[slot.time] = Array(6).fill('');
+});
+sectionData.courses.forEach(course => {
+    course.slots.forEach(s => {
+      courseMatrix[s.time][s.days[0]] = 
+        s.type === 'lab'
+          ? `${course.shortForm} (Lab ${course.labNumber})`
+          : course.shortForm;
+    });
+  });
+  
+            timetables.push({
+              batch: `${discipline} ${batchName}`,
+              section: sectionName,
+              room: sectionData.room,
+              structure: TIMETABLE_STRUCTURE,
+              courses: courseMatrix,
+              courseData: sectionData.courseData
             });
+          });
         });
-    
+      
+        // Open a new window and generate the PDF
         const pdfWindow = window.open();
         pdfWindow.document.write(
-            "<html><head><title>Timetable Report</title></head><body><div id='pdf-content'></div></body></html>"
+          "<html><head><title>Timetable Report</title></head><body><div id='pdf-content'></div></body></html>"
         );
         pdfWindow.document.close();
         PdfGenerator.generate({ timetables }, pdfWindow);
-    };
+      };
+      
     
 
     const columns = [{ label: 'Batch name', field: 'Batch' }];
-    const rows = Object.keys(COURSE_DATA).map(batch => ({ Batch: batch }));
+    const rows = Object.keys(timetableDict).map(discipline => ({ Batch: discipline }));
 
     const tabLabels = ['View list of timetables'];
     const tabContent = [
@@ -153,10 +273,22 @@ function Report() {
     ];
 
     return (
-        <div>
-            <TeacherTabs tabLabels={tabLabels} tabContent={tabContent} />
-        </div>
+      <div>
+        {loading ? (
+          <Box sx={{
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            height: '60vh'
+          }}>
+            <CircularProgress />
+          </Box>
+        ) : (
+          <TeacherTabs tabLabels={tabLabels} tabContent={tabContent} />
+        )}
+      </div>
     );
+    
 }
 
 export default Report;

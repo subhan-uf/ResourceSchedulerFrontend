@@ -1,7 +1,7 @@
 import React from "react";
 import { Image, PDFDownloadLink, Document, Page, View, Text, StyleSheet } from '@react-pdf/renderer';
 import ReactDOM from "react-dom";
-
+const year= 2025
 const styles = StyleSheet.create({
     page: { padding: 30 },
     section: { marginBottom: 10 },
@@ -66,7 +66,7 @@ export const PdfGenerator = {
   DEPARTMENT OF COMPUTER SCIENCE & INFORMATION TECHNOLOGY{'\n'}
   {(() => {
     const [batchName, batchYear] = timetable.batch.split(' ');
-    return `TIME TABLE FOR ${2025 - parseInt(batchYear)}th Year ${batchName} Spring 2025, BATCH ${batchYear}`;
+    return `TIME TABLE FOR ${year - parseInt(batchYear)}th Year ${batchName} Spring 2025, BATCH ${batchYear}`;
   })()}{'\n'}
   EFFECTIVE DATE: 06 January, 2025
 </Text>
