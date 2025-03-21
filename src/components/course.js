@@ -24,6 +24,7 @@ function Course() {
   const [courseData, setCourseData] = useState({
     Course_code: "",
     Course_name: "",
+    Course_fullname: "",
     Batch_ID: "",
     Discipline: "",             // must store an integer PK
     Max_classes_per_day: "",
@@ -128,6 +129,7 @@ function Course() {
       setCourseData({
         Course_code: foundCourse.Course_code || "",
         Course_name: foundCourse.Course_name || "",
+        Course_fullname: foundCourse.Course_fullname || "",
         Batch_ID: foundCourse.Batch_ID || "",   // store the integer PK
         Discipline: foundBatch?.Discipline || "",
         Max_classes_per_day: foundCourse.Max_classes_per_day?.toString() || "",
@@ -275,7 +277,7 @@ function Course() {
           }
         />
         <TextField
-          label="Course Name"
+          label="Course ShortForm"
           variant="outlined"
           type="text"
           fullWidth
@@ -285,6 +287,18 @@ function Course() {
             setCourseData({ ...courseData, Course_name: e.target.value })
           }
         />
+        <TextField
+  label="Course Full Name"
+  variant="outlined"
+  type="text"
+  fullWidth
+  required
+  value={courseData.Course_fullname}
+  onChange={(e) =>
+    setCourseData({ ...courseData, Course_fullname: e.target.value })
+  }
+/>
+
         <TextField
           label="Course Description"
           variant="outlined"
@@ -321,10 +335,10 @@ function Course() {
       setCourseData({ ...courseData, Credit_hours: selectedValue });
     }}
     menuItems={[
-      { label: '1 Hour', value: '1' },
-      { label: '2 Hours', value: '2' },
-      { label: '3 Hours', value: '3' },
-      { label: '4 Hours', value: '4' },
+      { label: '1', value: '1' },
+      { label: '2', value: '2' },
+      { label: '3', value: '3' },
+      { label: '4', value: '4' },
     ]}
     required
   />
