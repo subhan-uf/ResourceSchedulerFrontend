@@ -2,13 +2,12 @@ import React, { useEffect, useState } from "react";
 import TabsTeachers from "./designelements/tabforall"; // Your custom tab component
 import Tables from "./designelements/tables";
 import TextField from "@mui/material/TextField";
-import { Box, Button, FormControl } from "@mui/material";
+import { Box, Button, FormControl, Typography } from "@mui/material";
 import Singledropdown from "./designelements/singledropdown";
 import DynamicForm from "./designelements/dynamicform";
 import BatchService from "./api/batchService";
 import SectionService from "./api/sectionService";
 import AlertDialogModal from "./designelements/modal";
-
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import WarningIcon from '@mui/icons-material/Warning';
 import CustomAlert from "./designelements/alert";
@@ -279,8 +278,17 @@ const [snackbarColor, setSnackbarColor] = useState('neutral'); // success, dange
       setCurrentTab(0); // go back to list tab
     } catch (error) {
       console.error("Error creating/updating batch or sections:", error);
-
-      setSnackbarMessage('An error occurred while saving the batch or sections.');
+    
+      // If it’s a duplicate‑name validation error from DRF…
+      if (
+        error.response?.status === 400 &&
+        error.response.data?.Batch_name
+      ) {
+        setSnackbarMessage(error.response.data.Batch_name[0]);
+      } else {
+        setSnackbarMessage('An error occurred while saving the batch or sections.');
+      }
+    
       setSnackbarColor('danger');
       setSnackbarOpen(true);
     }
@@ -462,12 +470,38 @@ const [snackbarColor, setSnackbarColor] = useState('neutral'); // success, dange
       />
 
       {/* Delete confirmation modal */}
-      <AlertDialogModal
-        open={deleteModalOpen}
-        onClose={handleDeleteCancel}
-        onConfirm={handleDeleteConfirm}
-        message="Are you sure you want to delete this batch?"
-      />
+
+<AlertDialogModal
+  open={deleteModalOpen}
+  onClose={handleDeleteCancel}
+  onConfirm={handleDeleteConfirm}
+  message={
+    <Box>
+      <Typography variant="h6" color="error" fontWeight="bold" gutterBottom>
+        WARNING!
+      </Typography>
+      <Typography variant="body1" fontWeight="bold" gutterBottom>
+        Are you sure you want to delete this batch? All of the following related records will be <span style={{ textDecoration: 'underline' }}>PERMANENTLY deleted</span>:
+      </Typography>
+      <Box component="ul" sx={{ pl: 3, m: 0 }}>
+        {[
+          "Sections related to this Batch",
+          "Courses related to this Batch",
+          "Teachers related to this Batch",
+          "Preferences related to this Batch",
+          "Compensatory Classes related to this Batch",
+          "Timetable Generations related to this Batch",
+          "Reports of this Batch"
+        ].map(item => (
+          <Typography component="li" key={item} >
+            {item}
+          </Typography>
+        ))}
+      </Box>
+    </Box>
+  }
+/>
+
     </div>
   );
 }

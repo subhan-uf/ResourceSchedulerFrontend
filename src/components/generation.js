@@ -18,7 +18,7 @@ import GeneratedTimetables from "./designelements/generatedTimetables";
 import GenerationDescriptionModal from "./designelements/generationDescriptionModal";
 import apiClient from "./api/apiClient";
 import CustomSnackbar from "./designelements/alert";
-
+import { TextField } from "@mui/material"; 
 
 const alternateDayMap = {
   0: [2],     // Monday (0) cannot be disabled with Wednesday (2)
@@ -83,7 +83,11 @@ const [snackbarColor, setSnackbarColor] = useState("neutral"); // neutral, succe
   // Save the timetable status ("draft" or "published") that triggered the modal
   const [timetableStatus, setTimetableStatus] = useState("");
   // Fetch all required data on mount
-  const currentAcademicYear = 2025;
+  const [academicYearInput, setAcademicYearInput] = useState("2024-2025");
+const [currentAcademicYear, setCurrentAcademicYear] = useState(
+  parseInt(academicYearInput.split("-")[1], 10)
+);
+  // const currentAcademicYear = 2025;
   const initiateSaveTimetable = (status) => {
     setTimetableStatus(status);
     setShowModal(true);
@@ -454,7 +458,7 @@ const [snackbarColor, setSnackbarColor] = useState("neutral"); // neutral, succe
       }
 const targetDetail = labDetail || theoryDetail;
 
-      console.log("TARGETTT DETAILLL", targetDetail)
+      // console.log("TARGETTT DETAILLL", targetDetail)
   
       // 4. Get the batch and section info from header
       const section = sections.find((s) =>
@@ -599,10 +603,66 @@ if (targetDetail && targetDetail.Course_ID) {
   };
 
   // --- HANDLERS ---
-
+  const validateTeacherAssignments = () => {
+    // Build a set of keys for all teacher assignments.
+    // We expect each assignment key to be in the format:
+    // "discipline|batchId|year|sectionIndex|courseName|teacherType"
+    const teacherAssgn = mapTeacherAssignments();
+    const assignmentSet = new Set();
+    Object.values(teacherAssgn).forEach(teacher => {
+      teacher.assignments.forEach(assignment => {
+        // assignment is an array as defined above.
+        const key = assignment.join('|');
+        assignmentSet.add(key);
+      });
+    });
+  
+    // Get the discipline info mapping.
+    const discInfo = mapDisciplineInfo();
+    // Iterate over each discipline key (like "Computer Science, 4")
+    for (const [discKey, info] of Object.entries(discInfo)) {
+      // Split the key to get discipline and year.
+      const [discipline, yearStr] = discKey.split(',').map(s => s.trim());
+      const year = parseInt(yearStr, 10);
+      const batchId = info.batch_id;
+      // For every section (using its index in the sections array)
+      for (let sectionIndex = 0; sectionIndex < info.sections.length; sectionIndex++) {
+        // For every course in this batch:
+        for (const course of info.courses) {
+          // For theory, always required.
+          const theoryKey = [discipline, batchId, year, sectionIndex, course.name, "theory"].join('|');
+          if (!assignmentSet.has(theoryKey)) {
+            const sectionId = info.sections[sectionIndex];
+            const sectionObj = sections.find(s => String(s.Section_ID) === String(sectionId));
+            const batchObj = batches.find(b => String(b.Batch_ID) === String(batchId));
+            const sectionName = sectionObj?.Section_name ?? `Section ${sectionIndex + 1}`;
+            const batchName = batchObj?.Batch_name ?? batchId;
+            return `${sectionName} (${batchName}) is missing a THEORY teacher for course ${course.name}`;
+                      }
+          // For courses that have a lab component, also require a lab teacher.
+          if (course.is_lab) {
+            const labKey = [discipline, batchId, year, sectionIndex, course.name, "lab"].join('|');
+            if (!assignmentSet.has(labKey)) {
+              return `Section ${sectionIndex + 1} of ${discipline} (Batch ${batchId}) is missing a LAB teacher for course ${course.name}`;
+            }
+          }
+        }
+      }
+    }
+    return null; // All good.
+  };
+  
   const handleGenerate = async () => {
     try {
       setLoading(true);
+      const validationError = validateTeacherAssignments();
+      if (validationError) {
+        setSnackbarMessage(validationError);
+        setSnackbarColor("danger");
+        setSnackbarOpen(true);
+        setLoading(false);
+        return; // Stop generation if validation fails.
+      }
       const payload = mapDataForAlgorithm();
       console.log("Final Payload:", {
         ...payload,
@@ -611,7 +671,35 @@ if (targetDetail && targetDetail.Course_ID) {
       console.log("Sending payload:", payload);
       const result = await generationService.generateTimetable(payload);
       console.log("Generation result:", result);
+      
+      // Only if we're editing, preserve the saved timetable header IDs.
+      if (isEditing && generatedData?.timetable_headers) {
+        const oldHeaders = generatedData.timetable_headers;
+        const headerIdMap = {}; // Map new (temporary) IDs -> preserved old IDs
+      
+        // Update headers: For each new header, if a matching old header is found (by Batch_ID and Section_ID),
+        // replace the new Timetable_ID with the old one, and record the mapping.
+        result.timetable_headers = result.timetable_headers.map(newHeader => {
+          const originalNewId = newHeader.Timetable_ID; // the new id returned by the algorithm
+          const match = oldHeaders.find(h =>
+            String(h.Batch_ID) === String(newHeader.Batch_ID) &&
+            String(h.Section_ID) === String(newHeader.Section_ID)
+          );
+          const preservedId = match ? match.Timetable_ID : newHeader.Timetable_ID;
+          headerIdMap[originalNewId] = preservedId;
+          return { ...newHeader, Timetable_ID: preservedId };
+        });
+      
+        // Update timetable details: Replace the new Timetable_ID in each detail with the preserved one.
+        result.timetable_details = result.timetable_details.map(detail => {
+          const preservedId = headerIdMap[detail.Timetable_ID];
+          return preservedId ? { ...detail, Timetable_ID: preservedId } : detail;
+        });
+      }
+      
       setGeneratedData(result);
+      
+      
       // setLockedSlots([]);
       const computedLockedSlots = [];
 result.timetable_headers.forEach(header => {
@@ -624,7 +712,7 @@ result.timetable_headers.forEach(header => {
       const dayIndex = getDayIndex(detail.Day);
       const coveredSlots = getCoveredSlots(detail.Start_Time, detail.End_Time);
       console.log(detail.Start_Time, detail.End_Time);
-      console.log("Covered slots:", coveredSlots);
+      // console.log("Covered slots:", coveredSlots);
       coveredSlots.forEach(slotIndex => {
         if (dayIndex !== -1 && slotIndex !== -1) {
           computedLockedSlots.push(`${header.Timetable_ID}-${dayIndex}-${slotIndex}`);
@@ -633,7 +721,7 @@ result.timetable_headers.forEach(header => {
     }
   });
 });
-console.log("Computed", computedLockedSlots)
+// console.log("Computed", computedLockedSlots)
 setLockedSlots(computedLockedSlots);
     } catch (error) {
       console.error("Generation failed:", error);
@@ -653,7 +741,7 @@ setLockedSlots(computedLockedSlots);
       console.log("DETAIL RESPONSE", detailsResponse)
       const allHeaders = headersResponse.data;
       const allDetails = detailsResponse.data;
-      console.log(detailsResponse)
+      // console.log(detailsResponse)
       // console.log(allHeaders)
       // Filter headers by the selected generation's ID.
       const filteredHeaders = allHeaders.filter(header => {
@@ -665,7 +753,7 @@ setLockedSlots(computedLockedSlots);
       const filteredDetails = allDetails.filter(detail =>
         filteredHeaders.some(header => String(header.Timetable_ID) === String(detail.Timetable_ID))
       );
-      console.log("FILTERED DETAILS",filteredDetails)
+      // console.log("FILTERED DETAILS",filteredDetails)
 
       // Return the filtered data.
       return { timetable_headers: filteredHeaders, timetable_details: filteredDetails };
@@ -690,9 +778,9 @@ setLockedSlots(computedLockedSlots);
   ];
 
   const handleViewEditGeneration = async (generation) => {
-    console.log("Selected generation for view/edit:", generation);
+    // console.log("Selected generation for view/edit:", generation);
     const savedData = await fetchSavedTimetableData(generation.Generation_ID);
-    console.log("Fetched saved timetable data:", savedData);
+    // console.log("Fetched saved timetable data:", savedData);
   
     if (savedData && savedData.timetable_headers && savedData.timetable_details) {
       setGeneratedData(savedData);
@@ -705,7 +793,7 @@ setLockedSlots(computedLockedSlots);
         }
       });
       
-      console.log("MAPPPPPPPP",disabledDaysMap)
+      // console.log("MAPPPPPPPP",disabledDaysMap)
       setDisabledDays(disabledDaysMap);
       // Compute locked slots based on the saved timetable details.
       const newLockedSlots = [];
@@ -785,7 +873,7 @@ setLockedSlots(computedLockedSlots);
             ? labRooms.find((r) => String(r.Room_ID) === String(slot.Room_ID))
             : rooms.find((r) => String(r.Room_ID) === String(slot.Room_ID));
         const room = roomObj ? roomObj.Room_no : "N/A";
-        console.log("ROOOm",roomObj)
+        // console.log("ROOOm",roomObj)
         let displayText = courseName;
         if (slot.Theory_or_Lab === "lab") {
           displayText += ` (LAB - ${room})`;
@@ -928,8 +1016,12 @@ const handleSaveTimetable = async (description) => {
   try {
     if (timetableStatus === "published") {
       const headersResponse = await apiClient.get('/timetable-header/');
-      const alreadyPublished = headersResponse.data.some(header => header.Status === "published");
+      const alreadyPublished = headersResponse.data.some(header =>
+        header.Status === "published" &&
+        String(header.Generation) !== String(selectedGeneration?.Generation_ID)
+      );
       if (alreadyPublished) {
+      
         setSnackbarMessage("You can only publish 1 timetable.");
         setSnackbarColor("danger");
         setSnackbarOpen(true);
@@ -948,48 +1040,50 @@ const handleSaveTimetable = async (description) => {
       console.log("Updated Generation:", updateResponse.data);
 
       // Update timetable headers
-      for (const header of generatedData.timetable_headers) {
-        const headerPayload = {
-          Batch_ID: header.Batch_ID,
-          Section_ID: header.Section_ID,
-          Status: timetableStatus, // "draft" or "published"
-          Generation: selectedGeneration.Generation_ID, // use the existing generation id
-          disabled_days: (disabledDays[header.Timetable_ID] || []).join(','),  // Join the array into a comma-separated string
+      // 1️⃣ Delete all existing headers (and their details) for this generation
+// Delete only the headers that have the current generation ID.
+const existingHeadersRes = await generationService.getTimetableHeaders();
+const headersToDelete = existingHeadersRes.data.filter(
+  h => String(h.Generation) === String(selectedGeneration.Generation_ID)
+);
+await Promise.all(
+  headersToDelete.map(h => generationService.deleteTimetableHeader(h.Timetable_ID))
+);
 
-        };
-        console.log("Updating Header payload:", headerPayload);
-        await generationService.updateTimetableHeader(header.Timetable_ID, headerPayload);
-      }
+// 2️⃣ Create new headers (preserving the same Generation ID) and their details
+for (const header of generatedData.timetable_headers) {
+  const headerPayload = {
+    Batch_ID: header.Batch_ID,
+    Section_ID: header.Section_ID,
+    Status: timetableStatus,
+    Generation: selectedGeneration.Generation_ID,
+    disabled_days: (disabledDays[header.Timetable_ID] || []).join(','),
+  };
+  const savedHeader = await generationService.saveTimetableHeader(headerPayload);
+  const newHeaderId = savedHeader.data.Timetable_ID;
 
-      // Update timetable details
-      for (const detail of generatedData.timetable_details) {
-        const detailStart = detail.Start_time || detail.Start_Time || "";
-        const dayIndex = getDayIndex(detail.Day);
-        const timeslotIndex = getTimeslotIndex(detailStart);
-        // console.log(detailStart)
-        const slotKey = `${detail.Timetable_ID}-${dayIndex}-${timeslotIndex}`;
-        const isLocked = lockedSlots.includes(slotKey);
+  // Save all new details for this header
+  const detailsForHeader = generatedData.timetable_details.filter(d => String(d.Timetable_ID) === String(header.Timetable_ID));
+  for (const detail of detailsForHeader) {
+    const detailPayload = {
+      Timetable_ID: newHeaderId,
+      Course_ID: detail.Course_ID,
+      Teacher_ID: Number(detail.Teacher_ID),
+      Room_ID: Number(detail.Room_ID),
+      Day: detail.Day,
+      Start_time: normalizeTime(detail.Start_time || detail.Start_Time || ""),
+      End_time: normalizeTime(detail.End_time || detail.End_Time || ""),
+      Locked: lockedSlots.includes(`${newHeaderId}-${getDayIndex(detail.Day)}-${getTimeslotIndex(detail.Start_time)}`),
+      Teacher_pref_status: detail.Teacher_pref_status || "",
+      Theory_or_Lab: detail.Theory_or_Lab,
+      Hard_slot: detail.Hard_slot || false,
+    };
+    console.log("Detail EDIT payload:", detailPayload);
 
-        const detailPayload = {
-          Timetable_ID: detail.Timetable_ID,
-          Course_ID: detail.Course_ID,
-          Teacher_ID: Number(detail.Teacher_ID),
-          Room_ID: Number(detail.Room_ID),
-          Day: detail.Day,
-          Start_time: normalizeTime(detail.Start_time || detail.Start_Time || ""),
-          End_time: normalizeTime(detail.End_time || detail.End_Time || ""),
-          Locked: isLocked,
-          Teacher_pref_status: detail.Teacher_pref_status || "",
-          Theory_or_Lab: detail.Theory_or_Lab,
-          Hard_slot: detail.Hard_slot || false,
-          // Updated_At: new Date().toISOString(), // Add timestamp
-        };
-        console.log("Detail payload:", detailPayload);
-        await generationService.updateTimetableDetail(
-          detail.Detail_ID || detail.id, // Use correct field name
-          detailPayload
-        );
-      }
+    await generationService.saveTimetableDetail(detailPayload);
+  }
+}
+
       setIsEditing(false)
       setSnackbarMessage(`Timetable ${timetableStatus} successfully updated!`);
       setSnackbarColor("success");
@@ -1089,7 +1183,21 @@ const handleSaveTimetable = async (description) => {
     </Button>
   </Box>
 )}
-
+            <Box sx={{ display: "flex", justifyContent: "center", mb: 2 }}>
+  <TextField
+    label="Academic Year (YYYY-YYYY)"
+    value={academicYearInput}
+    helperText="Format: 2024-2025"
+    onChange={e => {
+      const val = e.target.value;
+      setAcademicYearInput(val);
+      const parts = val.split("-");
+      if (parts.length === 2 && !isNaN(parts[1])) {
+        setCurrentAcademicYear(parseInt(parts[1], 10));
+      }
+    }}
+  />
+</Box>
             <Box sx={{ display: "flex", justifyContent: "center", mt: 2 }}>
               <Button
                 variant="solid"

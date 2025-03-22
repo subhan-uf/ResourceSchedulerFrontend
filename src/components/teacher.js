@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import TeacherTabs from "./designelements/tabforall";
 import Tables from "./designelements/tables";
 import TextField from "@mui/material/TextField";
-import { Box, Button, FormControl } from "@mui/material";
+import { Box, Button, FormControl, Typography } from "@mui/material";
 import BasicBreadcrumbs from "./designelements/breadcrumbs";
 import Singledropdown from "./designelements/singledropdown";
 import Dropdown from "./designelements/multipledropdown"; // multi-select
@@ -783,12 +783,35 @@ for (const sectionId of selectedSections) {
       />
 
       {/* DELETE MODAL */}
-      <AlertDialogModal
-        open={deleteModalOpen}
-        onClose={handleDeleteCancel}
-        onConfirm={handleDeleteConfirm}
-        message="Are you sure you want to delete this teacher?"
-      />
+<AlertDialogModal
+  open={deleteModalOpen}
+  onClose={handleDeleteCancel}
+  onConfirm={handleDeleteConfirm}
+  message={
+    <Box>
+      <Typography variant="h6" color="error" fontWeight="bold" gutterBottom>
+        WARNING!
+      </Typography>
+      <Typography variant="body1" fontWeight="bold" gutterBottom>
+        Are you sure you want to delete this Teacher record? All of the following related records will be <span style={{ textDecoration: 'underline' }}>PERMANENTLY deleted</span>:
+      </Typography>
+      <Box component="ul" sx={{ pl: 3, m: 0 }}>
+        {[
+          
+
+          "-Preferences related to this Teacher",
+          "-Compensatory Classes related to this Teacher",
+          "-Timetable Generations related to this Teacher",
+          "-Reports of this Teacher"
+        ].map(item => (
+          <Typography component="li" key={item} >
+            {item}
+          </Typography>
+        ))}
+      </Box>
+    </Box>
+  }
+/>
     </div>
   );
 }

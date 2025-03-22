@@ -39,14 +39,15 @@ const styles = StyleSheet.create({
 });
 
 export const PdfGenerator = {
-    generate: (timetableData, window) => {
-        // Get unique courses
+    generate: ({ timetables, academicYear, session, effectiveDate }, window) => {        // Get unique courses
         // const courses = Object.values(timetableData.courseData);
-
+            const [startYear, endYear] = academicYear.split("-").map(Number);
+    const sessionYear = session === "Spring" ? endYear : startYear;
+    const constantYear = endYear;
         const MyDocument = () => (
             <Document>
         
-                {timetableData.timetables.map((timetable, index) => (
+                {timetables.map((timetable, index) => (
                     <Page key={index} size="A4" style={styles.page}>
      <Image
   src="/nedlogo.png"
@@ -60,18 +61,23 @@ export const PdfGenerator = {
 />
 
                         {/* Timetable Section */}
-                        <Text style={{ fontSize: 18, marginBottom: 35, textAlign: 'center', marginTop: 45 }}>
-                        <Text style={{ fontSize: 12, textAlign: 'center', marginBottom: 20 }}>
+                        <Text style={{ fontSize: 12, textAlign:'center', marginBottom:20 }}>
   TIME TABLE FOR BACHELORS DEGREE PROGRAMMES{'\n'}
   DEPARTMENT OF COMPUTER SCIENCE & INFORMATION TECHNOLOGY{'\n'}
   {(() => {
-    const [batchName, batchYear] = timetable.batch.split(' ');
-    return `TIME TABLE FOR ${year - parseInt(batchYear)}th Year ${batchName} Spring 2025, BATCH ${batchYear}`;
+    const batchYear = parseInt(timetable.batch.split(" ")[1], 10);
+    const yearNum = constantYear - batchYear;
+    const ordinal = yearNum === 1 ? "st"
+                  : yearNum === 2 ? "nd"
+                  : yearNum === 3 ? "rd"
+                  : "th";
+    return `TIME TABLE FOR ${yearNum}${ordinal} Year ${timetable.batch.split(" ")[0]} ${session} ${sessionYear}, BATCH ${batchYear}`;
   })()}{'\n'}
-  EFFECTIVE DATE: 06 January, 2025
+  EFFECTIVE DATE: {new Date(effectiveDate).toLocaleDateString('en-US', {
+    day: '2-digit', month: 'long', year: 'numeric'
+  })}
 </Text>
 
-                        </Text>
                         
                         {/* Theory Room Numbers */}
                         <View style={[styles.row, styles.header]}>

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import TabsTeachers from "./designelements/tabforall";
 import Tables from "./designelements/tables";
 import TextField from "@mui/material/TextField";
-import { Box, Button, FormControl } from "@mui/material";
+import { Box, Button, FormControl, Typography } from "@mui/material";
 import Singledropdown from "./designelements/singledropdown";
 import AlertDialogModal from "./designelements/modal";
 import CustomSnackbar from "./designelements/alert";
@@ -205,11 +205,14 @@ function Course() {
       resetForm();
     } catch (error) {
       console.error("Error creating/updating course:", error.response?.data);
-      const msg =
-        error.response?.data?.detail ||
-        error.response?.data?.error ||
+      const data = error.response?.data || {};
+      // Pick the validation message for Course_code if it exists
+      const message =
+        data.Course_code?.[0] ||   // e.g. ["Course code already exists"]
+        data.detail || 
         "An error occurred while saving the course.";
-      showSnackbar(msg, "danger");
+    
+      showSnackbar(message, "danger");
     }
   };
 
@@ -304,7 +307,7 @@ function Course() {
           variant="outlined"
           type="text"
           fullWidth
-          required
+         
           value={courseData.Course_desc}
           onChange={(e) =>
             setCourseData({ ...courseData, Course_desc: e.target.value })
@@ -362,6 +365,7 @@ function Course() {
       // Update discipline and reset batch
       setCourseData({ ...courseData, Discipline: selectedValue, Batch_ID: "" });
     }}
+    required
   />
 </FormControl>
 
@@ -381,6 +385,7 @@ function Course() {
       // Update state
       setCourseData({ ...courseData, Batch_ID: selectedValue });
     }}
+    required
   />
 </FormControl>
 <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
@@ -422,11 +427,36 @@ function Course() {
       />
 
       {/* Delete Modal */}
+     
+
+
       <AlertDialogModal
         open={deleteModalOpen}
         onClose={handleDeleteCancel}
         onConfirm={handleDeleteConfirm}
-        message="Are you sure you want to delete this course?"
+        message={
+          <Box>
+            <Typography variant="h6" color="error" fontWeight="bold" gutterBottom>
+              WARNING!
+            </Typography>
+            <Typography variant="body1" fontWeight="bold" gutterBottom>
+              Are you sure you want to delete this Course? All of the following related records will be <span style={{ textDecoration: 'underline' }}>PERMANENTLY deleted</span>:
+            </Typography>
+            <Box component="ul" sx={{ pl: 3, m: 0 }}>
+              {[
+                "-Teachers related to this Course",
+                "-Preferences related to this Course",
+                "-Compensatory Classes related to this Course",
+                "-Timetable Generations related to this Course",
+                "-Reports related to this Course"
+              ].map(item => (
+                <Typography component="li" key={item} >
+                  {item}
+                </Typography>
+              ))}
+            </Box>
+          </Box>
+        }
       />
     </div>
   );
