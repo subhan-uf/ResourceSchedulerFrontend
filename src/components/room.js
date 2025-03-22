@@ -107,7 +107,9 @@ function Room() {
       pk, // last item used for edit/delete
     ];
   });
-
+  const handleStopEditing = () => {
+    resetForm(); // Reuse your existing reset function
+  };
   // -----------------------------
   // EDIT
   // -----------------------------
@@ -233,8 +235,9 @@ function Room() {
   // -----------------------------
   // TABS
   // -----------------------------
-  const tabLabels = ["View list of rooms", "Enter new room"];
-
+  const tabLabels = isEditing 
+  ? ["View list of rooms", "Editing Room"] 
+  : ["View list of rooms", "Enter new Room"];
   // First tab content (list rooms)
   const tableContent = (
     <>
@@ -377,12 +380,35 @@ function Room() {
       />
 
       {/* TABS */}
+      <Box sx={{ position: 'relative' }}>
       <TabsTeachers
         tabLabels={tabLabels}
         tabContent={[tableContent, formContent]}
         externalIndex={currentTab}
         onIndexChange={(val) => setCurrentTab(val)}
       />
+      
+      {/* Add Stop Editing button */}
+      {isEditing && (
+        <Button
+          variant="contained"
+
+          onClick={handleStopEditing}
+          sx={{
+            position: 'absolute',
+            top: 40,
+            right: 16,
+            zIndex: 1000,
+            borderRadius: 2,
+            boxShadow: 2,
+            px: 3,
+            py: 1
+          }}
+        >
+          Stop Editing
+        </Button>
+      )}
+    </Box>
 
       {/* DELETE MODAL */}
       <AlertDialogModal

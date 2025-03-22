@@ -1,13 +1,19 @@
 import React, { useState, useEffect } from "react";
-import { Box, Button, CircularProgress, Table, TableBody, TableCell, TableHead, TableRow, Chip } from "@mui/material";
+import { Box, Button, CircularProgress, Table, TableBody, TableCell, TableHead, TableRow, Chip, Snackbar, Typography } from "@mui/material";
 import generationService from "../api/generationService";
 import apiClient from "../api/apiClient";
+import AlertDialogModal from "./modal";
+import CustomSnackbar from "./alert";
 
 const GeneratedTimetables = ({ onEditGeneration }) => {
   const [generations, setGenerations] = useState([]);
   const [loading, setLoading] = useState(false);
   const [headerStatuses, setHeaderStatuses] = useState({});
-  const fetchGenerations = async () => {
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+const [selectedGenId, setSelectedGenId] = useState(null);
+const [snackbarOpen, setSnackbarOpen] = useState(false);
+const [snackbarMessage, setSnackbarMessage] = useState('');  
+const fetchGenerations = async () => {
     setLoading(true);
     try {
       const res = await generationService.getGenerations();
@@ -73,6 +79,12 @@ const GeneratedTimetables = ({ onEditGeneration }) => {
   };
   return (
     <Box sx={{ p: 2 }}>
+      <CustomSnackbar
+  open={snackbarOpen}
+  onClose={() => setSnackbarOpen(false)}
+  message={snackbarMessage}
+  color="success"
+/>
       {loading ? (
         <CircularProgress />
       ) : (
@@ -110,7 +122,10 @@ const GeneratedTimetables = ({ onEditGeneration }) => {
                   <Button
                     variant="outlined"
                     color="error"
-                    onClick={() => handleDeleteGeneration(gen.Generation_ID)}
+                    onClick={() => {
+                      setSelectedGenId(gen.Generation_ID);
+                      setDeleteModalOpen(true);
+                    }}
                   >
                     Delete
                   </Button>
@@ -120,6 +135,45 @@ const GeneratedTimetables = ({ onEditGeneration }) => {
           </TableBody>
         </Table>
       )}
+      <AlertDialogModal
+  open={deleteModalOpen}
+  onClose={() => setDeleteModalOpen(false)}
+  onConfirm={async () => {
+    try {
+      await generationService.deleteGeneration(selectedGenId);
+      fetchGenerations();
+      setSnackbarMessage('Generation deleted successfully!');
+      setSnackbarOpen(true);
+    } catch (error) {
+      console.error("Error deleting generation:", error);
+    }
+    setDeleteModalOpen(false);
+  }}
+  message={
+    <Box>
+      <Typography variant="h6" color="error" fontWeight="bold" gutterBottom>
+        WARNING!
+      </Typography>
+      <Typography variant="body1" fontWeight="bold" gutterBottom>
+        Are you sure you want to delete this Timetable Generation? All of the following related records will be <span style={{ textDecoration: 'underline' }}>PERMANENTLY deleted</span>:
+      </Typography>
+      <Box component="ul" sx={{ pl: 3, m: 0 }}>
+        {[
+          
+          "-Complete Timetable data ",
+          "-Reports of this Timetable",
+          "-Compensatory Classes booked on this Timetable",
+         
+         
+        ].map(item => (
+          <Typography component="li" key={item} >
+            {item}
+          </Typography>
+        ))}
+      </Box>
+    </Box>
+  }
+/>
     </Box>
   );
 };

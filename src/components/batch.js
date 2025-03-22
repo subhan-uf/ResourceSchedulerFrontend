@@ -100,6 +100,13 @@ const [snackbarColor, setSnackbarColor] = useState('neutral'); // success, dange
   // -----------------------------
   // Edit
   // -----------------------------
+  const handleStopEditing = () => {
+    setIsEditing(false);
+    setBatchData({ Discipline: "", Batch_name: "", Year: "" });
+    setSections([]);
+    setCurrentTab(0);
+    setEditingBatchId(null);
+  };
   const handleEdit = async (rowData) => {
     // rowData is [Batch_name, Year, numSections, maxStudents, pk]
     const batchId = rowData[rowData.length - 1];
@@ -309,8 +316,9 @@ const [snackbarColor, setSnackbarColor] = useState('neutral'); // success, dange
   // -----------------------------
   // Tabs
   // -----------------------------
-  const tabLabels = ["View list of batches", "Enter new batch"];
-
+  const tabLabels = isEditing 
+  ? ["View list of batches", "Editing Batch"] 
+  : ["View list of batches", "Enter new batch"];
   // 1st tab content = table
   const tableContent = (
     <Tables
@@ -462,12 +470,36 @@ const [snackbarColor, setSnackbarColor] = useState('neutral'); // success, dange
         color={snackbarColor}
       />
 
+<Box sx={{ position: 'relative' }}>
       <TabsTeachers
         tabLabels={tabLabels}
         tabContent={[tableContent, formContent]}
         externalIndex={currentTab}
         onIndexChange={(val) => setCurrentTab(val)}
       />
+      
+      {/* Add Stop Editing button */}
+      {isEditing && (
+        <Button
+          variant="contained"
+          
+          onClick={handleStopEditing}
+          sx={{
+            position: 'absolute',
+            top: 40,
+            right: 16,
+            zIndex: 1000,
+            borderRadius: 2,
+            boxShadow: 2,
+            px: 3,
+            py: 1
+          }}
+        >
+          Stop Editing
+        </Button>
+      )}
+    </Box>
+
 
       {/* Delete confirmation modal */}
 

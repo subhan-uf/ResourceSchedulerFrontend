@@ -9,6 +9,7 @@ import CustomSnackbar from "./designelements/alert";
 import CourseService from "./api/courseService";
 import BatchService from "./api/batchService";
 import Checkboxx from "./designelements/checkbox";
+import coursePreferenceService from "./api/courseTimePreferenceService";
 
 function Course() {
   // -----------------------------
@@ -196,8 +197,22 @@ function Course() {
       console.log(payload)
       if (isEditing && editingCourseId) {
         await CourseService.updateCourse(editingCourseId, payload);
+      
+        // — Delete obsolete lab‑preferences if course is now theory‑only —
+        if (!payload.Is_Lab) {
+          const allPrefs = await coursePreferenceService.getAll();
+          const labPrefs = allPrefs.data.filter(pref =>
+            String(pref.Course_ID) === String(editingCourseId) &&
+            pref.Lab_or_Theory.toLowerCase() === "lab"
+          );
+          await Promise.all(labPrefs.map(pref =>
+            coursePreferenceService.delete(pref.Preference_ID)
+          ));
+        }
+      
         showSnackbar("Course updated successfully!", "success");
-      } else {
+      } 
+      else {
         await CourseService.createCourse(payload);
         showSnackbar("Course created successfully!", "success");
       }
@@ -238,12 +253,17 @@ function Course() {
     setSnackbarColor(color);
     setSnackbarOpen(true);
   };
+  const handleStopEditing = () => {
+    resetForm(); // Reuse your existing reset function
+  };
 
   // -----------------------------
   // Build Tab Content
   // -----------------------------
-  const tabLabels = ["View list of courses", "Enter new course"];
-
+// Replace your existing tabLabels declaration with:
+const tabLabels = isEditing 
+  ? ["View list of courses", "Editing Course"] 
+  : ["View list of courses", "Enter new course"];
   const tableContent = (
     <Tables
       tableHeadings={tableHeadings}
@@ -333,12 +353,16 @@ function Course() {
     name="credit-hours"
     label="Credit Hours"
     value={courseData.Credit_hours} // Controlled state
-    onChange={(selectedValue) => {
-      // Update state with the selected value
-      setCourseData({ ...courseData, Credit_hours: selectedValue });
-    }}
+              onChange={(selectedValue) =>
+                  setCourseData(prev => ({
+                    ...prev,
+                    Credit_hours: selectedValue,
+                    // Only a 4‑credit course can be a lab
+                    Is_Lab: selectedValue === '4'
+                  }))
+                }
     menuItems={[
-      { label: '1', value: '1' },
+      { label: '0', value: '0' },
       { label: '2', value: '2' },
       { label: '3', value: '3' },
       { label: '4', value: '4' },
@@ -389,12 +413,13 @@ function Course() {
   />
 </FormControl>
 <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-<Checkboxx
-  label="This is a Lab course"
-  checked={!!courseData.Is_Lab} // Ensure it's always a boolean
-  onChange={(checkedVal) =>
-    setCourseData({ ...courseData, Is_Lab: checkedVal })
-  }
+ <Checkboxx
+   label="This is a Lab course"
+   checked={courseData.Credit_hours === '4'}
+   disabled
+    onChange={(checkedVal) => 
+      setCourseData({ ...courseData, Is_Lab: checkedVal })
+    }
 />
 
   </Box>
@@ -419,12 +444,35 @@ function Course() {
       />
 
       {/* Tabs */}
+      <Box sx={{ position: 'relative' }}>
       <TabsTeachers
         tabLabels={tabLabels}
         tabContent={[tableContent, formContent]}
         externalIndex={currentTab}
         onIndexChange={(val) => setCurrentTab(val)}
       />
+      
+      {/* Add Stop Editing button */}
+      {isEditing && (
+        <Button
+          variant="contained"
+     
+          onClick={handleStopEditing}
+          sx={{
+            position: 'absolute',
+            top: 40,
+            right: 16,
+            zIndex: 1000,
+            borderRadius: 2,
+            boxShadow: 2,
+            px: 3,
+            py: 1
+          }}
+        >
+          Stop Editing
+        </Button>
+      )}
+    </Box>
 
       {/* Delete Modal */}
      

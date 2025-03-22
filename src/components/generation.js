@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import TeacherTabs from "./designelements/tabforall";
-import { Alert, Box, CircularProgress } from "@mui/material";
+import { Alert, Box, CircularProgress, Typography } from "@mui/material";
 import Button from "@mui/joy/Button";
 import Timetable from "./designelements/timetable";
 
@@ -19,6 +19,7 @@ import GenerationDescriptionModal from "./designelements/generationDescriptionMo
 import apiClient from "./api/apiClient";
 import CustomSnackbar from "./designelements/alert";
 import { TextField } from "@mui/material"; 
+import AlertDialogModal from "./designelements/modal";
 
 const alternateDayMap = {
   0: [2],     // Monday (0) cannot be disabled with Wednesday (2)
@@ -80,6 +81,8 @@ const [snackbarColor, setSnackbarColor] = useState("neutral"); // neutral, succe
   const [generatedData, setGeneratedData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
+  const [saveLoading, setSaveLoading] = useState(false);
+
   // Save the timetable status ("draft" or "published") that triggered the modal
   const [timetableStatus, setTimetableStatus] = useState("");
   // Fetch all required data on mount
@@ -641,9 +644,14 @@ if (targetDetail && targetDetail.Course_ID) {
                       }
           // For courses that have a lab component, also require a lab teacher.
           if (course.is_lab) {
+            
             const labKey = [discipline, batchId, year, sectionIndex, course.name, "lab"].join('|');
-            if (!assignmentSet.has(labKey)) {
-              return `Section ${sectionIndex + 1} of ${discipline} (Batch ${batchId}) is missing a LAB teacher for course ${course.name}`;
+            const sectionId = info.sections[sectionIndex];
+            const sectionObj = sections.find(s => String(s.Section_ID) === String(sectionId));
+            const batchObj = batches.find(b => String(b.Batch_ID) === String(batchId));
+            const sectionName = sectionObj?.Section_name ?? `Section ${sectionIndex + 1}`;
+            const batchName = batchObj?.Batch_name ?? batchId;if (!assignmentSet.has(labKey)) {
+              return `${sectionName} of ${discipline} (${batchName}) is missing a LAB teacher for course ${course.name}`;
             }
           }
         }
@@ -1013,6 +1021,7 @@ setLockedSlots(computedLockedSlots);
   };
   
 const handleSaveTimetable = async (description) => {
+  setSaveLoading(true); 
   try {
     if (timetableStatus === "published") {
       const headersResponse = await apiClient.get('/timetable-header/');
@@ -1065,7 +1074,14 @@ for (const header of generatedData.timetable_headers) {
   // Save all new details for this header
   const detailsForHeader = generatedData.timetable_details.filter(d => String(d.Timetable_ID) === String(header.Timetable_ID));
   for (const detail of detailsForHeader) {
-    const detailPayload = {
+    const dayIndex = getDayIndex(detail.Day);
+let timeslotIndex = getTimeslotIndex(detail.Start_time || detail.Start_Time);
+if(timeslotIndex==6 || timeslotIndex==7||timeslotIndex==8){
+  timeslotIndex-=1
+}
+const slotKey = `${header.Timetable_ID}-${dayIndex}-${timeslotIndex}`;    
+console.log("slotkey", slotKey)
+const detailPayload = {
       Timetable_ID: newHeaderId,
       Course_ID: detail.Course_ID,
       Teacher_ID: Number(detail.Teacher_ID),
@@ -1073,7 +1089,14 @@ for (const header of generatedData.timetable_headers) {
       Day: detail.Day,
       Start_time: normalizeTime(detail.Start_time || detail.Start_Time || ""),
       End_time: normalizeTime(detail.End_time || detail.End_Time || ""),
-      Locked: lockedSlots.includes(`${newHeaderId}-${getDayIndex(detail.Day)}-${getTimeslotIndex(detail.Start_time)}`),
+      Locked: lockedSlots.includes(slotKey) ||
+      generatedData.timetable_details.some(oldDetail =>
+        oldDetail.Locked &&
+        oldDetail.Day === detail.Day &&
+        normalizeTime(oldDetail.Start_time || oldDetail.Start_Time) === normalizeTime(detail.Start_time || detail.Start_Time) &&
+        normalizeTime(oldDetail.End_time   || oldDetail.End_Time)   === normalizeTime(detail.End_time   || detail.End_Time) &&
+        Number(oldDetail.Teacher_ID) === Number(detail.Teacher_ID)
+      ),
       Teacher_pref_status: detail.Teacher_pref_status || "",
       Theory_or_Lab: detail.Theory_or_Lab,
       Hard_slot: detail.Hard_slot || false,
@@ -1118,7 +1141,10 @@ for (const header of generatedData.timetable_headers) {
         for (const detail of detailsForHeader) {
           const detailStart = detail.Start_time || detail.Start_Time || "";
           const dayIndex = getDayIndex(detail.Day);
-          const timeslotIndex = getTimeslotIndex(detailStart);
+          let timeslotIndex = getTimeslotIndex(detailStart);
+          if(timeslotIndex==6 || timeslotIndex==7 || timeslotIndex==8){
+            timeslotIndex-=1
+          }
           const slotKey = `${header.Timetable_ID}-${dayIndex}-${timeslotIndex}`;
           const isLocked = lockedSlots.includes(slotKey);
 
@@ -1144,8 +1170,14 @@ for (const header of generatedData.timetable_headers) {
       setSnackbarColor("success");
       setSnackbarOpen(true);
           }
+          setTimeout(() => {
+            window.location.reload();
+          }, 500); 
   } catch (error) {
     console.error(`Error saving/updating timetable as ${timetableStatus}:`, error);
+  }finally {
+    setSaveLoading(false); // Hide loading spinner
+ // Refresh the page after save
   }
 };
   
@@ -1279,13 +1311,16 @@ for (const header of generatedData.timetable_headers) {
     variant="contained"
     color="secondary"
     onClick={() =>initiateSaveTimetable("draft")}
+    disabled={saveLoading}
   >
     Draft Timetable
   </Button>
   <Button
     variant="contained"
-    color="primary"
+    // color="primary"
     onClick={() => initiateSaveTimetable("published")}
+    disabled={saveLoading}
+
   >
     Publish Timetable
   </Button>
@@ -1322,7 +1357,95 @@ for (const header of generatedData.timetable_headers) {
   message={snackbarMessage} 
   color={snackbarColor} 
 />
-
+{saveLoading && (
+  <Box sx={{
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 9999,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.92)',
+    backdropFilter: 'blur(4px)',
+  }}>
+    <Box sx={{
+      textAlign: 'center',
+      p: 4,
+      borderRadius: '16px',
+      boxShadow: 3,
+      backgroundColor: 'background.paper',
+      animation: 'slideIn 0.3s ease-out',
+      '@keyframes slideIn': {
+        '0%': { transform: 'translateY(-20px)', opacity: 0 },
+        '100%': { transform: 'translateY(0)', opacity: 1 }
+      }
+    }}>
+      <CircularProgress 
+        size={64}
+        thickness={4}
+        sx={{
+          color: 'primary.main',
+          animation: 'pulse 1.5s ease-in-out infinite',
+          '@keyframes pulse': {
+            '0%': { transform: 'scale(1)', opacity: 1 },
+            '50%': { transform: 'scale(1.05)', opacity: 0.8 },
+            '100%': { transform: 'scale(1)', opacity: 1 }
+          }
+        }}
+      />
+      <Typography 
+        variant="h6" 
+        sx={{ 
+          mt: 3,
+          fontWeight: 600,
+          color: 'text.primary',
+          letterSpacing: '0.5px',
+          animation: 'fadeIn 0.5s ease-out',
+          '@keyframes fadeIn': {
+            '0%': { opacity: 0 },
+            '100%': { opacity: 1 }
+          }
+        }}
+      >
+        Saving Timetable
+      </Typography>
+      <Typography 
+        variant="body2" 
+        sx={{ 
+          mt: 1,
+          color: 'text.secondary',
+          fontWeight: 500,
+          animation: 'fadeIn 0.5s ease-out 0.2s backwards'
+        }}
+      >
+        Please don't close the window
+      </Typography>
+      <Box sx={{
+        mt: 2,
+        height: 2,
+        backgroundColor: 'divider',
+        borderRadius: 2,
+        overflow: 'hidden',
+        width: 160,
+        mx: 'auto'
+      }}>
+        <Box sx={{
+          width: '100%',
+          height: '100%',
+          backgroundColor: 'primary.main',
+          animation: 'progressBar 2s ease-in-out infinite',
+          '@keyframes progressBar': {
+            '0%': { transform: 'translateX(-100%)' },
+            '100%': { transform: 'translateX(100%)' }
+          }
+        }} />
+      </Box>
+    </Box>
+  </Box>
+)}
     </div>
   );
 }

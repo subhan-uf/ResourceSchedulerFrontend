@@ -118,7 +118,9 @@ function Preference() {
       showSnackbar("Failed to fetch room prefs.", "danger");
     }
   };
-
+  const handleStopEditing = () => {
+    resetForm(); // Reuse your existing reset function
+  };
   // Fetch course/time preferences
   const fetchCoursePrefs = async () => {
     try {
@@ -701,11 +703,10 @@ function Preference() {
 
   const getSectionTitle = (id) => `Preference #${id}`;
 
-  const tabLabels = [
-    "View list of room preferences",
-    "View list of class time preferences",
-    "Enter new preference",
-  ];
+  
+  const tabLabels = isEditing 
+  ? ["View list of Room Preferences","View list of Class Time Preferences" ,"Editing Preference"] 
+  : ["View list of courses","View list of Class Time Preferences"  ,"Enter new Preference"];
 
   const roomPrefTable = (
     <Tables
@@ -797,12 +798,36 @@ function Preference() {
 
   return (
     <div>
+  
+      <Box sx={{ position: 'relative' }}>
       <TeacherTabs
         tabLabels={tabLabels}
         tabContent={tabContent}
         externalIndex={currentTab}
         onIndexChange={(val) => setCurrentTab(val)}
       />
+      
+      {/* Add Stop Editing button */}
+      {isEditing && (
+        <Button
+          variant="contained"
+          
+          onClick={handleStopEditing}
+          sx={{
+            position: 'absolute',
+            top: 40,
+            right: 16,
+            zIndex: 1000,
+            borderRadius: 2,
+            boxShadow: 2,
+            px: 3,
+            py: 1
+          }}
+        >
+          Stop Editing
+        </Button>
+      )}
+    </Box>
       <CustomSnackbar
         open={snackbarOpen}
         onClose={() => setSnackbarOpen(false)}

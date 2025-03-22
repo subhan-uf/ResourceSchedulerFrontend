@@ -63,7 +63,8 @@ const [selectedDay, setSelectedDay] = useState("Monday");
 // In Compensatory component (top-level state declarations)
 const [showViewTimetable, setShowViewTimetable] = useState(false);
 const [allTimetableDetails, setAllTimetableDetails] = useState([]);
-
+// Add to your existing state declarations:
+const [currentTab, setCurrentTab] = useState(0);
 useEffect(() => {
     if (!isEditing) {
       setSelectedBatch("");
@@ -189,6 +190,12 @@ useEffect(() => {
         setSnackbarOpen(true);
     };
     const resetForm = () => {
+      setIsEditing(false);
+      setCurrentTab(0);  // Force switch back to first tab
+      
+      // Add explicit state resets:
+      setEditingId(null);
+      setSelectedCompId(null);
         setSelectedSlots([]);
         setRoomSlots([]);
         setSelectedCourse("");
@@ -204,6 +211,14 @@ useEffect(() => {
       };
       const handleFieldChange = () => {
         setShowTimetable(false); // Hide timetable when any field is changed
+      };
+      const handleStopEditing = () => {
+        resetForm();
+        // Force refresh if needed
+        setTimeout(() => {
+          setCurrentTab(0);
+          setIsEditing(false);
+        }, 50);
       };
       const handleDeleteConfirm = async () => {
         try {
@@ -800,8 +815,9 @@ const getDayIndex = (day) => {
       
       
     
-    const tabLabels = ['View list of compensatory classes', "Book new compensatory class", 'View booked slots on timetable'];
-    const tabContent = [
+      const tabLabels = isEditing 
+      ? ["View list of Compensatory classes", "Editing Compensatory class"] 
+      : ["View list of Compensatory classes", "Enter new Compensatory class"];    const tabContent = [
         <Tables tableHeadings={tableHeadings} tableRows={tableRows}  onEdit={(rowData) => handleEditClick(rowData[rowData.length - 1])}
         onDelete={(rowData) => handleDeleteClick(rowData[rowData.length - 1])}/>,
         <div>
@@ -1129,7 +1145,37 @@ const getDayIndex = (day) => {
       onConfirm={handleDeleteConfirm}
       message="Are you sure you want to delete this compensatory record?"
     />
-            <TeacherTabs tabLabels={tabLabels} tabContent={tabContent} />
+            {/* <TeacherTabs tabLabels={tabLabels} tabContent={tabContent} /> */}
+            <Box sx={{ position: 'relative' }}>
+      <TeacherTabs
+        tabLabels={tabLabels}
+        tabContent={tabContent}
+        externalIndex={currentTab}
+        onIndexChange={(val) => setCurrentTab(val)}
+      />
+      
+      {/* Add Stop Editing button */}
+      {isEditing && (
+        <Button
+          variant="contained"
+   
+          onClick={handleStopEditing}
+          sx={{
+            position: 'absolute',
+            top: 40,
+            right: 16,
+            zIndex: 1000,
+            borderRadius: 2,
+            boxShadow: 2,
+            px: 3,
+            py: 1
+          }}
+        >
+          Stop Editing
+        </Button>
+      )}
+    </Box>
+            
             <CustomSnackbar
     open={snackbarOpen}
     onClose={() => setSnackbarOpen(false)}

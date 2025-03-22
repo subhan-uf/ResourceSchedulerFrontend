@@ -407,6 +407,9 @@ useEffect(() => {
   //   1) create/update teacher
   //   2) remove old TCA + BCTA => re-create
   // ------------------------------------
+  const handleStopEditing = () => {
+    resetForm(); // Reuse your existing reset function
+  };
   const handleSubmit = async (e) => {
     e.preventDefault();
     const teacherPayload = {
@@ -554,7 +557,7 @@ for (const sectionId of selectedSections) {
   // ------------------------------------
   const tabLabels = [
     "View list of teachers",
-    isEditing ? "Updating teacher" : "Enter new teacher"
+    isEditing ? "Editing teacher" : "Enter new teacher"
   ];
   
 
@@ -775,12 +778,36 @@ for (const sectionId of selectedSections) {
         color={snackbarColor}
       />
 
+<Box sx={{ position: 'relative' }}>
       <TeacherTabs
         tabLabels={tabLabels}
         tabContent={[tableContent, formContent]}
         externalIndex={currentTab}
         onIndexChange={(val) => setCurrentTab(val)}
       />
+      
+      {/* Add Stop Editing button */}
+      {isEditing && (
+        <Button
+          variant="contained"
+         
+          onClick={handleStopEditing}
+          sx={{
+            position: 'absolute',
+            top: 40,
+            right: 16,
+            zIndex: 1000,
+            borderRadius: 2,
+            boxShadow: 2,
+            px: 3,
+            py: 1
+          }}
+        >
+          Stop Editing
+        </Button>
+      )}
+    </Box>
+
 
       {/* DELETE MODAL */}
 <AlertDialogModal
