@@ -23,6 +23,7 @@ import apiClient from "./api/apiClient";
 import AlertDialogModal from "./designelements/modal";
 import CustomSnackbar from "./designelements/alert";
 import ViewCompensatoryTimetable from "./designelements/ViewCompensatoryTimetable";
+import { FormLabel, RadioGroup, FormControlLabel, Radio } from '@mui/material';
 
 function Compensatory() {
     const [selectedSlots, setSelectedSlots] = useState([]);
@@ -64,6 +65,8 @@ const [selectedDay, setSelectedDay] = useState("Monday");
 const [showViewTimetable, setShowViewTimetable] = useState(false);
 const [allTimetableDetails, setAllTimetableDetails] = useState([]);
 // Add to your existing state declarations:
+const [searchQuery, setSearchQuery] = useState("");
+
 const [currentTab, setCurrentTab] = useState(0);
 useEffect(() => {
     if (!isEditing) {
@@ -78,7 +81,8 @@ useEffect(() => {
   }, [isEditing]);
   
   useEffect(() => {
-    if (selectedWeek && sectionTimetableDetails.length > 0) {
+
+    if (selectedWeek  ) {
       handleViewAvailableRooms();
     }
   }, [sessionType, selectedWeek, sectionTimetableDetails]);// Ensure to call the function when sessionType or other dependencies change
@@ -358,7 +362,7 @@ useEffect(() => {
     };
 
     const sectionAndBatch = `${sessionType.charAt(0).toUpperCase() + sessionType.slice(1)} Room ${roomLookup[selectedRoom]?.Room_no || ''}`;
-    console.log("ROOM",roomLookup[selectedRoom])
+    // console.log("ROOM",roomLookup[selectedRoom])
     const TimetableData = [
         { time: "08:30 - 09:20", days: ["", "DWH", "", "NLP", ""] },
         { time: "09:20 - 10:10", days: ["", "NLP", "", "NIS", ""] },
@@ -373,7 +377,19 @@ useEffect(() => {
     const tableHeadings = ['Teacher name', 'Course Name', 'Section', 'Room number','Day' ,'Week', 'Start time', 'End time','Session Type' ,'Status', 'Description', 'Actions'];
 
     // Map compensatory records from API to table rows
-    const tableRows = compRecords.map((record) => [
+    const filteredCompRecords = compRecords.filter(record =>
+      Object.values([
+        teacherLookup[record.Teacher_ID]?.Name || "",
+        courseLookup[record.Course_ID]?.Course_name || "",
+        sectionLookup[record.Section_ID]?.Section_name || "",
+        roomLookup[record.Room_ID]?.Room_no || "",
+        record.day,
+        record.Week_number,
+        record.Status,
+        record.Desc
+      ]).join(" ").toLowerCase().includes(searchQuery.toLowerCase())
+    );
+    const tableRows = filteredCompRecords.map((record) => [
         teacherLookup[record.Teacher_ID] ? teacherLookup[record.Teacher_ID].Name : "N/A",
         courseLookup[record.Course_ID] ? courseLookup[record.Course_ID].Course_name : "N/A",
         sectionLookup[record.Section_ID] ? sectionLookup[record.Section_ID].Section_name : "N/A",
@@ -410,9 +426,9 @@ useEffect(() => {
       }
       
       const handleViewRoomSlots = async () => {
-        if (!selectedRoom || !selectedWeek) {
+        if (!selectedRoom || !selectedWeek || !selectedBatch || !selectedCourse || !selectedTeacher) {
             
-            showSnackbar("Please select a room and a week.", "danger")
+            showSnackbar("Please make a selection in all the fields.", "danger")
             return;
         }
     
@@ -818,9 +834,19 @@ const getDayIndex = (day) => {
       const tabLabels = isEditing 
       ? ["View list of Compensatory classes", "Editing Compensatory class"] 
       : ["View list of Compensatory classes", "Enter new Compensatory class"];    const tabContent = [
+        <>
+        <Box sx={{ mb: 2, maxWidth: 200 }}>
+        <TextField
+          label="Search compensatory..."
+          fullWidth
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+        />
+      </Box>
         <Tables tableHeadings={tableHeadings} tableRows={tableRows}  onEdit={(rowData) => handleEditClick(rowData[rowData.length - 1])}
-        onDelete={(rowData) => handleDeleteClick(rowData[rowData.length - 1])}/>,
-        <div>
+        onDelete={(rowData) => handleDeleteClick(rowData[rowData.length - 1])}/>
+        </>
+        ,<div>
             <form onSubmit={handleSubmit}>
                 <Box
                     sx={{
@@ -848,21 +874,17 @@ const getDayIndex = (day) => {
   value={selectedTeacher}
   onChange={(selectedValue) => {
     setSelectedTeacher(selectedValue);
-    if (!selectedValue) {
-      // Clear all dependent selections if teacher is unselected
-      handleFieldChange()
-      setTeacherAssignments([]);
-      setTeacherBatches([]);
-      setSelectedBatch("");
-      setTeacherSections([]);
-      setSelectedSection("");
-      setTeacherCourses([]);
-      setSelectedCourse("");
-    } else {
-      // When a teacher is selected, fetch that teacher's assignments
-      fetchTeacherAssignments(selectedValue);
-    }
+    handleFieldChange();
+    setSelectedBatch("");
+    setSelectedSection("");
+    setSelectedCourse("");
+    setTeacherAssignments([]);
+    setTeacherBatches([]);
+    setTeacherSections([]);
+    setTeacherCourses([]);
+    if (selectedValue) fetchTeacherAssignments(selectedValue);
   }}
+  disabled={isEditing}
   required
 />
 
@@ -882,24 +904,21 @@ const getDayIndex = (day) => {
     })}
     value={selectedBatch}
     onChange={(selectedValue) => {
-      handleFieldChange()
+      handleFieldChange();
       setSelectedBatch(selectedValue);
-      if (!selectedValue) {
-        // Clear sections if batch is unselected
-        setTeacherSections([]);
-        setSelectedSection("");
-      } else {
-        // Get sections FOR THIS BATCH from ALL teacher assignments
+      setSelectedSection("");
+      setSelectedCourse("");
+      if (selectedValue) {
         const sectionsForBatch = teacherAssignments
           .filter(a => a.Batch_ID === selectedValue)
-          .map(a => Number(a.Section)); // Convert to number
-
-        const uniqueSections = [...new Set(sectionsForBatch)];
-        setTeacherSections(uniqueSections);
+          .map(a => Number(a.Section));
+        setTeacherSections([...new Set(sectionsForBatch)]);
+      } else {
+        setTeacherSections([]);
       }
       setTeacherCourses([]);
-      setSelectedCourse("");
     }}
+    disabled={isEditing}
     required
   />
 </FormControl>
@@ -919,17 +938,18 @@ const getDayIndex = (day) => {
   })}
   value={selectedSection}
   onChange={(selectedValue) => {
-    handleFieldChange()
+    handleFieldChange();
     setSelectedSection(selectedValue);
-    // When section changes, clear any room selections
+    setSelectedCourse("");
     setAvailableRooms([]);
     setSelectedRoom("");
     setRoomSlots([]);
-    // Fetch the timetable details for the selected section
-    fetchSectionTimetableDetails(selectedValue);
-    // Also, fetch teacher courses if needed
-    fetchTeacherCourses(selectedTeacher, selectedValue);
+    if (selectedValue) {
+      fetchSectionTimetableDetails(selectedValue);
+      fetchTeacherCourses(selectedTeacher, selectedValue);
+    }
   }}
+  disabled={isEditing}
   required
 />
 
@@ -952,6 +972,7 @@ const getDayIndex = (day) => {
     setSelectedCourse(selectedValue);
     console.log("Selected Course:", selectedValue);
   }}
+  disabled={isEditing}
   required
 />
 
@@ -986,17 +1007,21 @@ const getDayIndex = (day) => {
 </FormControl>
 
 
-                    <RadioButton
-  label="Select session type"
-  options={['Lab', 'Theory']}
-  icons={[<ComputerIcon />, <MenuBookIcon />]}
-  value={sessionType}
-  onChange={(value) => {
-    handleFieldChange()
-    setSessionType(value.toLowerCase())}
-  
-    }  required
-/>
+<FormControl component="fieldset" required>
+  <FormLabel component="legend">Select session type</FormLabel>
+  <RadioGroup
+    row
+    value={sessionType}
+    onChange={(event) => {
+      handleFieldChange();
+      setSessionType(event.target.value.toLowerCase());
+    }}
+  >
+    <FormControlLabel value="lab" control={<Radio />} label="Lab" />
+    <FormControlLabel value="theory" control={<Radio />} label="Theory" />
+  </RadioGroup>
+</FormControl>
+
 
 
 <Box sx={{ gridColumn: 'span 2', mt: 2 }}>

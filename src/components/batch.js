@@ -31,6 +31,7 @@ const [snackbarColor, setSnackbarColor] = useState('neutral'); // success, dange
   const [allSections, setAllSections] = useState([]);
   const [isEditing, setIsEditing] = useState(false);
   const [editingBatchId, setEditingBatchId] = useState(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
   // For controlling the tab index in TabsTeachers
   const [currentTab, setCurrentTab] = useState(0);
@@ -64,12 +65,21 @@ const [snackbarColor, setSnackbarColor] = useState('neutral'); // success, dange
       console.error("Error fetching sections:", error);
     }
   };
-
+  const filteredBatches = batches.filter(batch =>
+    Object.values({
+      Discipline: batch.Discipline,
+      Batch_name: batch.Batch_name,
+      Year: batch.Year
+    })
+      .join(" ")
+      .toLowerCase()
+      .includes(searchQuery.toLowerCase())
+  );
   // -----------------------------
   // Build Table Rows
   // -----------------------------
   const tableHeadings = ["Discipline","Batch name", "Year", "Sections", "Max students per section", "Actions"];
-  const tableRows = batches.map((batch) => {
+  const tableRows = filteredBatches.map((batch) => {
     // This is the actual primary key. If your backend returns "id",
     // use `batch.id`. If it returns "Batch_ID" as the real PK,
     // you might do "batch.Batch_ID". If both exist, prefer `batch.id`.
@@ -321,12 +331,22 @@ const [snackbarColor, setSnackbarColor] = useState('neutral'); // success, dange
   : ["View list of batches", "Enter new batch"];
   // 1st tab content = table
   const tableContent = (
+    <>
+    <Box sx={{ mb: 2, maxWidth: 200 }}>
+      <TextField
+        label="Search batches..."
+        fullWidth
+        value={searchQuery}
+        onChange={(e) => setSearchQuery(e.target.value)}
+      />
+    </Box>
     <Tables
       tableHeadings={tableHeadings}
       tableRows={tableRows}
       onEdit={handleEdit}
       onDelete={handleDeleteClick}
     />
+    </>
   );
 
   // 2nd tab content = form

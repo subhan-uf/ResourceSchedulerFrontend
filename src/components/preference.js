@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import TeacherTabs from "./designelements/tabforall"; // Your custom tab component
 import Tables from "./designelements/tables"; // Your custom table
-import { Box, Button, FormControl } from "@mui/material";
+import { Box, Button, FormControl, TextField } from "@mui/material";
 import axios from "axios";
 
 // Services
@@ -26,6 +26,9 @@ function Preference() {
   const [snackbarMessage, setSnackbarMessage] = useState("");
   const [snackbarColor, setSnackbarColor] = useState("neutral");
   const [batches, setBatches] = useState([]);
+  const [searchRoomQuery, setSearchRoomQuery] = useState("");
+const [searchCourseQuery, setSearchCourseQuery] = useState("");
+
   const showSnackbar = (msg, color) => {
     setSnackbarMessage(msg);
     setSnackbarColor(color);
@@ -531,9 +534,15 @@ function Preference() {
     setEditingId(null);
     setCurrentTab(0);
   };
-
+  const filteredRoomPrefs = roomPrefs.filter(rp =>
+    Object.values([
+      rp.Room_Preference_ID ?? rp.Preference_ID,
+      `${rp.Teacher_ID} - ${teachers.find(t => t.Teacher_ID.toString() === rp.Teacher_ID.toString())?.Name || ""}`,
+      rp.Floor || ""
+    ]).join(" ").toLowerCase().includes(searchRoomQuery.toLowerCase())
+  );
   // Build table rows for Room Preferences
-  const roomPrefRows = roomPrefs.map((rp) => {
+  const roomPrefRows = filteredRoomPrefs.map((rp) => {
     const pk = rp.Room_Preference_ID || rp.Preference_ID;
     const teacherObj = teachers.find(
       (t) => t.Teacher_ID.toString() === rp.Teacher_ID.toString()
@@ -543,9 +552,16 @@ function Preference() {
       : `${rp.Teacher_ID} - ???`;
     return [pk, teacherLabel, rp.Floor || "", pk];
   });
-
+  const filteredCoursePrefs = coursePrefs.filter(cp =>
+    Object.values([
+      cp.Preference_ID,
+      `${cp.Teacher_ID} - ${teachers.find(t => t.Teacher_ID.toString() === cp.Teacher_ID.toString())?.Name || ""}`,
+      courses.find(c => c.Course_ID.toString() === cp.Course_ID.toString())?.Course_name || "",
+      cp.Day
+    ]).join(" ").toLowerCase().includes(searchCourseQuery.toLowerCase())
+  );
   // Build table rows for Course Preferences
-  const coursePrefRows = coursePrefs.map((cp) => {
+  const coursePrefRows = filteredCoursePrefs.map((cp) => {
     const pk = cp.Preference_ID || cp.CoursePref_ID;
     const teacherObj = teachers.find(
       (t) => t.Teacher_ID.toString() === cp.Teacher_ID.toString()
@@ -709,21 +725,42 @@ function Preference() {
   : ["View list of courses","View list of Class Time Preferences"  ,"Enter new Preference"];
 
   const roomPrefTable = (
+    <>
+    <Box sx={{ mb: 2, maxWidth: 200 }}>
+      <TextField
+        label="Search room prefs..."
+        fullWidth
+        value={searchRoomQuery}
+        onChange={e => setSearchRoomQuery(e.target.value)}
+      />
+    </Box>
     <Tables
       tableHeadings={roomTableHeadings}
       tableRows={roomPrefRows}
       onDelete={handleRoomDeleteClick}
       onEdit={handleRoomEditClick}
     />
+  </>
   );
   const coursePrefTable = (
-    <Tables
-      tableHeadings={courseTableHeadings}
-      tableRows={coursePrefRows}
-      onDelete={handleCourseDeleteClick}
-      onEdit={handleCourseEditClick}
-    />
+    <>
+      <Box sx={{ mb: 2, maxWidth: 200}}>
+        <TextField
+          label="Search course prefs..."
+          fullWidth
+          value={searchCourseQuery}
+          onChange={e => setSearchCourseQuery(e.target.value)}
+        />
+      </Box>
+      <Tables
+        tableHeadings={courseTableHeadings}
+        tableRows={coursePrefRows}
+        onDelete={handleCourseDeleteClick}
+        onEdit={handleCourseEditClick}
+      />
+    </>
   );
+  
   const addPreferenceForm = (
     <div>
       <form onSubmit={handleSubmit}>

@@ -18,6 +18,7 @@ function Course() {
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
   const [snackbarColor, setSnackbarColor] = useState("neutral"); // success, danger, etc.
+  const [searchQuery, setSearchQuery] = useState("");
 
   // -----------------------------
   // Course Form Data
@@ -92,9 +93,20 @@ function Course() {
     "Course Type",
     "Actions",
   ];
+  const filteredCourses = courses.filter(course =>
+    Object.values({
+      Course_code: course.Course_code,
+      Course_name: course.Course_name,
+      Discipline: batches.find(b => b.Batch_ID === course.Batch_ID)?.Discipline ?? "",
+      Batch: batches.find(b => b.Batch_ID === course.Batch_ID)?.Batch_name ?? "",
+    })
+      .join(" ")
+      .toLowerCase()
+      .includes(searchQuery.toLowerCase())
+  );
 
   // Convert courses into table rows
-  const tableRows = courses.map((course) => {
+  const tableRows = filteredCourses.map((course) => {
     // Real PK might be course.Course_ID or course.id
     const pk = course.Course_ID; 
     // find matching batch
@@ -265,12 +277,22 @@ const tabLabels = isEditing
   ? ["View list of courses", "Editing Course"] 
   : ["View list of courses", "Enter new course"];
   const tableContent = (
+    <>
+    <Box sx={{ mb: 2, maxWidth: 200 }}>
+      <TextField
+        label="Search courses..."
+        fullWidth
+        value={searchQuery}
+        onChange={(e) => setSearchQuery(e.target.value)}
+      />
+    </Box>
     <Tables
       tableHeadings={tableHeadings}
       tableRows={tableRows}
       onEdit={handleEdit}
       onDelete={handleDeleteClick}
     />
+  </>
   );
 
   const formContent = (

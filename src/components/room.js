@@ -36,6 +36,7 @@ function Room() {
   // For editing
   const [isEditing, setIsEditing] = useState(false);
   const [editingRoomId, setEditingRoomId] = useState(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
   // -----------------------------
   // TABLE DATA
@@ -92,21 +93,23 @@ function Room() {
   ];
 
   // Build rows from rooms state
-  const tableRows = rooms.map((room) => {
-    // The PK might be room.Room_ID
-    const pk = room.Room_ID;
-
-    return [
-      room.Room_no,
-      room.Max_capacity,
-      room.Floor,
-      room.Room_type,
-      room.Multimedia ? "Available" : "Not Available",
-      room.Speaker ? "Available" : "Not Available",
-      room.Room_status, // "enable" or "disable"
-      pk, // last item used for edit/delete
-    ];
-  });
+  const filteredRooms = rooms.filter(room =>
+    Object.values(room)
+      .join(" ")
+      .toLowerCase()
+      .includes(searchQuery.toLowerCase())
+  );
+  
+  const tableRows = filteredRooms.map(room => [
+    room.Room_no,
+    room.Max_capacity,
+    room.Floor,
+    room.Room_type,
+    room.Multimedia ? "Available" : "Not Available",
+    room.Speaker ? "Available" : "Not Available",
+    room.Room_status,
+    room.Room_ID,
+  ]);
   const handleStopEditing = () => {
     resetForm(); // Reuse your existing reset function
   };
@@ -242,6 +245,15 @@ function Room() {
   const tableContent = (
     <>
       <BasicBreadcrumbs breadcrumbs={breadcrumbsListRooms} />
+      <Box sx={{ mb: 2, maxWidth: 200}}>
+      <TextField
+        label="Search rooms..."
+        fullWidth
+        variant="outlined"
+        value={searchQuery}
+        onChange={(e) => setSearchQuery(e.target.value)}
+      />
+    </Box>
       <Tables
         tableHeadings={[...tableHeadings, "Actions"]}
         tableRows={tableRows}

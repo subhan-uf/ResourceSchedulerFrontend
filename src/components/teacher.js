@@ -93,6 +93,7 @@ const [sections, setSections] = useState([]); // all sections from the API
   // Editing
   const [isEditing, setIsEditing] = useState(false);
   const [editingTeacherId, setEditingTeacherId] = useState(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
   // ------------------------------------
   // LOAD TEACHERS, BATCHES, COURSES
@@ -258,8 +259,20 @@ useEffect(() => {
     "Seniority",
     "Actions",
   ];
-
-  const tableRows = teachers.map((tch) => {
+  const filteredTeachers = teachers.filter(t =>
+    Object.values({
+      Teacher_ID: t.Teacher_ID,
+      Name: t.Name,
+      NIC: t.NIC,
+      Email: t.Email,
+      Phone: t.Phone,
+      Seniority: t.Seniority,
+    })
+      .join(" ")
+      .toLowerCase()
+      .includes(searchQuery.toLowerCase())
+  );
+  const tableRows = filteredTeachers.map((tch) => {
     const pk = tch.Teacher_ID;
     return [
       tch.Teacher_ID,
@@ -565,6 +578,14 @@ for (const sectionId of selectedSections) {
   const tableContent = (
     <>
       <BasicBreadcrumbs breadcrumbs={breadcrumbsList} />
+      <Box sx={{ mb: 2, maxWidth: 200 }}>
+      <TextField
+        label="Search teachers..."
+        fullWidth
+        value={searchQuery}
+        onChange={(e) => setSearchQuery(e.target.value)}
+      />
+    </Box>
       <Tables
         tableHeadings={tableHeadings}
         tableRows={tableRows}
