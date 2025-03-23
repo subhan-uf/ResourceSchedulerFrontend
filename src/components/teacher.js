@@ -8,6 +8,12 @@ import Singledropdown from "./designelements/singledropdown";
 import Dropdown from "./designelements/multipledropdown"; // multi-select
 import AlertDialogModal from "./designelements/modal";
 import CustomSnackbar from "./designelements/alert";
+import { Paper, Grid, Stack, IconButton } from "@mui/material";
+import DeleteIcon from "@mui/icons-material/Delete";
+import AddIcon from "@mui/icons-material/Add";
+import ToggleButton from "@mui/material/ToggleButton";
+import ToggleButtonGroup from "@mui/material/ToggleButtonGroup";
+import FormLabel from "@mui/material/FormLabel";
 
 // Services
 import teacherService from "./api/teacherService";
@@ -40,7 +46,8 @@ function Teacher() {
   // For Delete
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [teacherIdToDelete, setTeacherIdToDelete] = useState(null);
-
+  const [bctaAssignments, setBctaAssignments] = useState([]);
+  const [assignmentMappings, setAssignmentMappings] = useState([]);
   // BREADCRUMBS
   const breadcrumbsList = [
     { label: "Dashboard", url: "/dashboard" },
@@ -144,7 +151,32 @@ useEffect(() => {
   setSelectedTheoryCourses(validTheory);
 }, [labCourses, theoryCourses]);
   
-  
+useEffect(() => {
+  async function fetchBCTAs() {
+    try {
+      const resp = await batchCourseTeacherAssignmentService.getAllAssignments();
+      setBctaAssignments(resp.data);
+    } catch (error) {
+      console.error("Error fetching BCTA assignments:", error);
+    }
+  }
+  fetchBCTAs();
+}, []);
+// When no disciplines are selected, clear batches and assignment mappings.
+useEffect(() => {
+  if (selectedDisciplines.length === 0) {
+    setSelectedBatches([]);
+    setAssignmentMappings([]);
+  }
+}, [selectedDisciplines]);
+
+// When no batches are selected, clear assignment mappings.
+useEffect(() => {
+  if (selectedBatches.length === 0) {
+    setAssignmentMappings([]);
+  }
+}, [selectedBatches]);
+
   useEffect(() => {
     async function fetchSections() {
       try {
@@ -238,14 +270,84 @@ useEffect(() => {
   
 
 
-  useEffect(() => {
-    const filtered = allCourses.filter((course) =>
-      selectedBatches.includes(course.Batch_ID) // course belongs to one of the selected Batch_IDs
+useEffect(() => {
+  // First, filter courses that belong to the selected batches
+  const filtered = allCourses.filter(course =>
+    selectedBatches.includes(course.Batch_ID)
+  );
+  setFilteredCourses(filtered);
+
+  // For Lab Courses: only include courses with a lab component (Is_Lab true)
+  // and that are not already assigned as a lab in any of the selected sections/batches.
+  const updatedLab = filtered.filter(course => {
+    if (!course.Is_Lab) return false; // Skip if course is not a lab course
+    const conflict = bctaAssignments.some(a =>
+      a.Course_ID === course.Course_ID &&
+      a.Course_type === "lab" &&
+      selectedSections.includes(a.Section) &&
+      selectedBatches.includes(a.Batch_ID) &&
+      // Allow the course if it is already assigned to the current teacher (when editing)
+      (!isEditing || a.Teacher_ID !== parseInt(formData.Teacher_ID, 10))
     );
-    setFilteredCourses(filtered);
-    setLabCourses(filtered.filter((c) => c.Is_Lab === true));
-    setTheoryCourses(filtered.filter((c) => c.Is_Lab === false|| c.Is_Lab==true));
-  }, [selectedBatches, allCourses]);
+    return !conflict;
+  });
+  setLabCourses(updatedLab);
+
+  // For Theory Courses: include courses that are not already assigned as theory in the selected sections/batches.
+  const updatedTheory = filtered.filter(course => {
+    const conflict = bctaAssignments.some(a =>
+      a.Course_ID === course.Course_ID &&
+      a.Course_type === "theory" &&
+      selectedSections.includes(a.Section) &&
+      selectedBatches.includes(a.Batch_ID) &&
+      (!isEditing || a.Teacher_ID !== parseInt(formData.Teacher_ID, 10))
+    );
+    return !conflict;
+  });
+  setTheoryCourses(updatedTheory);
+}, [selectedBatches, allCourses, selectedSections, bctaAssignments, isEditing, formData.Teacher_ID]);
+
+const getAvailableCoursesForMapping = (sectionId, courseType, currentIndex) => {
+  // Find the section object based on the selected section ID.
+  const sectionObj = sections.find(s => s.Section_ID === sectionId);
+  if (!sectionObj) return [];
+  
+  // Filter courses that belong to the Batch of this section.
+  let available = allCourses.filter(course => course.Batch_ID === sectionObj.Batch_ID);
+  
+  // For lab, only include courses that have a lab component.
+  if (courseType === "lab") {
+    available = available.filter(course => course.Is_Lab === true);
+  }
+  // For theory, we assume all courses are allowed.
+  
+  available = available.filter(course => {
+    const conflict = bctaAssignments.some(a =>
+      String(a.Course_ID) === String(course.Course_ID) &&
+      String(a.Course_type).toLowerCase() === courseType.toLowerCase() &&
+      String(a.Section) === String(sectionId) &&
+      // When editing, allow the teacher’s own assignment.
+      (!isEditing || String(a.Teacher_ID) !== String(formData.Teacher_ID))
+    );
+    return !conflict;
+  });
+
+  
+  // Remove courses already chosen in other assignment mappings (for same section and type)
+  // Remove courses already chosen in other assignment mappings (for same section and type)
+  available = available.filter(course => {
+    return !assignmentMappings.some((mapping, idx) => 
+      idx !== currentIndex &&
+      String(mapping.sectionId) === String(sectionId) &&
+      String(mapping.courseType).toLowerCase() === courseType.toLowerCase() &&
+      String(mapping.courseId) === String(course.Course_ID)
+    );
+  });
+
+  
+  return available;
+};
+
 
   // ------------------------------------
   // TABLE HEADINGS & ROWS
@@ -326,9 +428,6 @@ useEffect(() => {
       const uniqueBatchIDs = [
         ...new Set(teacherBCTAs.map((a) => a.Batch_ID)),
       ];
-      const uniqueSectionIDs = [
-        ...new Set(teacherBCTAs.map((a) => a.Section)),
-      ];
       const disciplinesFromBatches = [...new Set(
         uniqueBatchIDs.map((batchId) => {
           const batch = batches.find((b) => b.Batch_ID === batchId);
@@ -349,10 +448,14 @@ useEffect(() => {
         Disciplines: disciplinesFromBatches||"",
       });
       setSelectedDisciplines(disciplinesFromBatches);
-      setSelectedBatches(uniqueBatchIDs); // e.g. [1,2]
-      setSelectedSections(uniqueSectionIDs);
-      setSelectedLabCourses(labIds);       // e.g. [5,6]
-      setSelectedTheoryCourses(theoryIds); // e.g. [3]
+      setSelectedBatches(uniqueBatchIDs); // keep batches for filtering
+      setAssignmentMappings(
+        teacherBCTAs.map(a => ({
+          sectionId: a.Section,
+          courseType: a.Course_type,
+          courseId: a.Course_ID,
+        }))
+      ); // e.g. [3]
       
 
       setIsEditing(true);
@@ -493,37 +596,23 @@ useEffect(() => {
       // for each selected batch => for each selected theory course => create BCTA w/ Course_type="theory"
       // 4) RE-CREATE BCTA
 // Instead of iterating over selectedBatches, iterate over selectedSections
-for (const sectionId of selectedSections) {
-  // Find the section object so we can get its Batch_ID.
-  const sectionObj = sections.find((s) => s.Section_ID === sectionId);
+// NEW: Iterate over the assignmentMappings array to create BCTA assignments.
+for (const mapping of assignmentMappings) {
+  // Only create an assignment if all fields are provided.
+  if (!mapping.sectionId || !mapping.courseType || !mapping.courseId) continue;
+  const sectionObj = sections.find((s) => s.Section_ID === mapping.sectionId);
   if (!sectionObj) continue; // safety check
-
-  // Create assignments for lab courses for this section
-  for (const cid of selectedLabCourses) {
-    const bctaPayload = {
-      Assignment_ID: Math.floor(Math.random() * 100000),
-      Batch_ID: parseInt(sectionObj.Batch_ID, 10),
-      Section: sectionId, // include the section ID
-      Course_ID: cid,
-      Teacher_ID: teacherPayload.Teacher_ID,
-      Course_type: "lab",
-    };
-    await batchCourseTeacherAssignmentService.createAssignment(bctaPayload);
-  }
-  
-  // Create assignments for theory courses for this section
-  for (const cid of selectedTheoryCourses) {
-    const bctaPayload = {
-      Assignment_ID: Math.floor(Math.random() * 100000),
-      Batch_ID: parseInt(sectionObj.Batch_ID, 10),
-      Section: sectionId, // include the section ID
-      Course_ID: cid,
-      Teacher_ID: teacherPayload.Teacher_ID,
-      Course_type: "theory",
-    };
-    await batchCourseTeacherAssignmentService.createAssignment(bctaPayload);
-  }
+  const bctaPayload = {
+    Assignment_ID: Math.floor(Math.random() * 100000),
+    Batch_ID: parseInt(sectionObj.Batch_ID, 10),
+    Section: mapping.sectionId,
+    Course_ID: mapping.courseId,
+    Teacher_ID: teacherPayload.Teacher_ID,
+    Course_type: mapping.courseType,
+  };
+  await batchCourseTeacherAssignmentService.createAssignment(bctaPayload);
 }
+
 
 
       fetchTeachers();
@@ -562,6 +651,8 @@ for (const sectionId of selectedSections) {
     setSelectedTheoryCourses([]);
     setIsEditing(false);
     setEditingTeacherId(null);
+    setAssignmentMappings([]);
+
     setCurrentTab(0);
   };
 
@@ -717,7 +808,14 @@ for (const sectionId of selectedSections) {
       { label: "Data Science", value: "Data Science" },
     ]}
     value={selectedDisciplines}
-    onChange={(newValues) => setSelectedDisciplines(newValues)}
+    onChange={(newValues) => {
+      setSelectedDisciplines(newValues);
+      // Clear batches and assignments if no disciplines are selected.
+      if (newValues.length === 0) {
+        setSelectedBatches([]);
+        setAssignmentMappings([]);
+      }
+    }}    
     multiple
   />
 </FormControl>
@@ -729,11 +827,17 @@ for (const sectionId of selectedSections) {
               heading="Select Batches (Multiple)"
               menuItems={filteredBatches}
               value={selectedBatches}
-              onChange={(newValues) => setSelectedBatches(newValues)}
+              onChange={(newValues) => {
+                setSelectedBatches(newValues);
+                // Clear assignment mappings if no batches are selected.
+                if (newValues.length === 0) {
+                  setAssignmentMappings([]);
+                }
+              }}              
               multiple
             />
           </FormControl>
-          <FormControl fullWidth>
+          {/* <FormControl fullWidth>
   <Dropdown
     heading="Select Sections (Multiple)"
     menuItems={filteredSections} // Only sections from the selected batches
@@ -741,10 +845,10 @@ for (const sectionId of selectedSections) {
     onChange={(newValues) => setSelectedSections(newValues)}
     multiple
   />
-</FormControl>
+</FormControl> */}
 
           {/* MULTI-SELECT LAB COURSES */}
-          <FormControl fullWidth>
+          {/* <FormControl fullWidth>
             <Dropdown
               heading="Select Lab Courses"
               menuItems={labCourses.map((c) => ({
@@ -755,10 +859,10 @@ for (const sectionId of selectedSections) {
               onChange={handleLabCoursesChange}
               multiple
             />
-          </FormControl>
+          </FormControl> */}
 
           {/* MULTI-SELECT THEORY COURSES */}
-          <FormControl fullWidth>
+          {/* <FormControl fullWidth>
             <Dropdown
               heading="Select Theory Courses"
               menuItems={theoryCourses.map((c) => ({
@@ -769,7 +873,113 @@ for (const sectionId of selectedSections) {
               onChange={handleTheoryCoursesChange}
               multiple
             />
-          </FormControl>
+          </FormControl> */}
+          {/* NEW: Assignment Mappings */}
+{/* ===== PROFESSIONAL ASSIGNMENT MAPPINGS ===== */}
+<Box sx={{ gridColumn: "span 2", width: "100%", maxWidth: 900, mx: "auto", mt: 4 }}>
+  <Typography variant="h5" fontWeight={600} gutterBottom>
+    Assignment Mappings
+  </Typography>
+
+  <Stack spacing={2}>
+    {assignmentMappings.map((mapping, i) => (
+      <Paper key={i} elevation={2} sx={{ p: 2, borderRadius: 2 }}>
+        <Grid container spacing={2} alignItems="center">
+          <Grid item xs={12} sm={4}>
+            <Singledropdown
+              label="Section"
+              fullWidth
+              value={mapping.sectionId}
+              onChange={newVal => {
+                const updated = [...assignmentMappings];
+                updated[i].sectionId = newVal;
+                updated[i].courseId = "";
+                setAssignmentMappings(updated);
+              }}
+              menuItems={filteredSections}
+              required
+            />
+          </Grid>
+
+          <Grid item xs={10} sm={2} marginLeft={7}>
+  <FormControl component="fieldset" fullWidth>
+    <ToggleButtonGroup
+      exclusive
+      fullWidth
+      size="small"
+      value={mapping.courseType}
+      onChange={(e, newType) => {
+        if (newType) {
+          const updated = [...assignmentMappings];
+          updated[i].courseType = newType;
+          updated[i].courseId = "";
+          setAssignmentMappings(updated);
+        }
+      }}
+      aria-label="course type"
+      sx={{ borderRadius: 1 }}
+      required
+    >
+      <ToggleButton value="lab" aria-label="lab">
+        Lab
+      </ToggleButton>
+      <ToggleButton value="theory" aria-label="theory">
+        Theory
+      </ToggleButton>
+    </ToggleButtonGroup>
+  </FormControl>
+</Grid>
+
+
+          <Grid item xs={12} sm={4}>
+          <Singledropdown
+              label="Course"
+              fullWidth
+              value={mapping.courseId}
+              onChange={newVal => {
+                const updated = [...assignmentMappings];
+                updated[i].courseId = newVal;
+                setAssignmentMappings(updated);
+              }}
+              menuItems={
+                mapping.sectionId && mapping.courseType
+                  ? getAvailableCoursesForMapping(mapping.sectionId, mapping.courseType, i).map(c => ({
+                      label: c.Course_name,
+                      value: c.Course_ID,
+                    }))
+                  : []
+              }
+              required
+            />
+          </Grid>
+
+          <Grid item xs={12} sm={1} textAlign="right">
+            <IconButton color="error" onClick={() => {
+              const updated = [...assignmentMappings];
+              updated.splice(i, 1);
+              setAssignmentMappings(updated);
+            }}>
+              <DeleteIcon />
+            </IconButton>
+          </Grid>
+        </Grid>
+      </Paper>
+    ))}
+
+    <Button
+      variant="contained"
+      startIcon={<AddIcon />}
+      sx={{ alignSelf: "flex-start" }}
+      onClick={() =>
+        setAssignmentMappings([...assignmentMappings, { sectionId: "", courseType: "", courseId: "" }])
+      }
+    >
+      Add Assignment
+    </Button>
+  </Stack>
+</Box>
+
+
 
           <Box sx={{ gridColumn: "span 2", textAlign: "center", mt: 2 }}>
             <Button variant="contained" color="primary" type="submit" fullWidth>

@@ -382,7 +382,8 @@ const [snackbarColor, setSnackbarColor] = useState('neutral'); // success, dange
     ]}
     value={batchData.Discipline} // Controlled value
     onChange={(selectedValue) => {
-      setBatchData({ ...batchData, Discipline: selectedValue });
+      setBatchData({ Discipline: selectedValue, Year: "", Batch_name: "" });
+      setSections([]); // also clear sections if you want
     }}
   />
 </FormControl>
@@ -399,29 +400,19 @@ const [snackbarColor, setSnackbarColor] = useState('neutral'); // success, dange
     ]}
     value={batchData.Year} // Controlled value
     onChange={(selectedValue) => {
-      // Get current discipline
       const discipline = batchData.Discipline;
-      // Determine the prefix based on discipline
       let prefix = "Batch";
-      if (discipline === "Artificial Intelligence" || discipline === "Artificial intelligence") {
-        prefix = "BSAI";
-      } else if (discipline === "Cyber Security") {
-        prefix = "BSCR";
-      } else if (discipline === "Data Science") {
-        prefix = "BSDT";
-      } else if (discipline === "Computer Science") {
-        prefix = "BSCS";
-      } else if (discipline === "Gaming and Animation") {
-        prefix = "BSGA";
-      }
-      // Update year and auto-generate Batch_name with the prefix
+      if (discipline === "Computer Science") prefix = "BSCS";
+      else if (discipline === "Artificial Intelligence") prefix = "BSAI";
+      else if (discipline === "Cyber Security") prefix = "BSCR";
+      else if (discipline === "Data Science") prefix = "BSDT";
+      else if (discipline === "Gaming and Animation") prefix = "BSGA";
       setBatchData({
-        ...batchData,
+        Discipline: discipline,
         Year: selectedValue,
         Batch_name: `${prefix} Batch ${selectedValue}`,
       });
     }}
-    
   />
 </FormControl>
         <TextField
