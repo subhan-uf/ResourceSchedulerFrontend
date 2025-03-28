@@ -1,116 +1,52 @@
 import React from "react";
 import Cards from "./designelements/dashboardmenu";
 import Box from "@mui/material/Box";
+import Container from "@mui/material/Container";
+import Paper from "@mui/material/Paper";
 import Grid from "@mui/material/Grid";
-import Typography from '@mui/joy/Typography';
+import Typography from "@mui/material/Typography";
+import Divider from "@mui/material/Divider";
 
-function Dashboard() {
+export default function Dashboard() {
   return (
-    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
-      <div>
-        <Typography level="h1" align="center" gutterBottom>Dashboard</Typography>
-        <Box
-          sx={{
-            flexGrow: 1,
-            padding: 2,
-            border: '1px solid #ccc', // Light gray border color
-            borderRadius: '8px', // Rounded corners
-            boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)', // Subtle shadow for a lifted effect
-            backgroundColor: '#f9f9f9',
-            maxWidth: 1200, // Constrain width for better centering
-            margin: 'auto', // Center the box horizontally
-          }}
+    <Box sx={{ bgcolor: "grey.100", minHeight: "100vh", py: 8 }}>
+      <Container maxWidth="lg">
+        {/* Page Title */}
+        {/* <Typography variant="h3" align="center" fontWeight={700} gutterBottom>
+          Dashboard
+        </Typography> */}
+        <Typography
+          variant="subtitle1"
+          align="center"
+          color="text.secondary"
+          sx={{ mb: 1 }}
         >
-          <Grid
-            container
-            spacing={3}
-            justifyContent="center"
-          >
-            <Grid item xs={12} sm={6} md={4}>
-              <Cards
-                heading="Teacher Management"
-                subtext="Add, delete, edit and view teachers"
-                imageSrc="teacher.png"
-                linkTo="/teacher"
-              />
-            </Grid>
-            <Grid item xs={12} sm={6} md={4}>
-              <Cards
-                heading="Room Management"
-                subtext="Add, delete, edit and view Rooms"
-                imageSrc="room.png"
-                linkTo="/room"
-              />
-            </Grid>
-            <Grid item xs={12} sm={6} md={4}>
-              <Cards
-                heading="Course Management"
-                subtext="Add, delete, edit and view Courses"
-                imageSrc="course.png"
-                linkTo="/course"
-              />
-            </Grid>
-            <Grid item xs={12} sm={6} md={4}>
-              <Cards
-                heading="Batch Management"
-                subtext="Add, delete, edit and view Batches"
-                imageSrc="batch.png"
-                linkTo="/batch"
-              />
-            </Grid>
-            <Grid item xs={12} sm={6} md={4}>
-              <Cards
-                heading="Preference/Constraint"
-                subtext="Add, delete, edit and view room and timing preferences"
-                imageSrc="preference.png"
-                linkTo="/preference"
-              />
-            </Grid>
-            <Grid item xs={12} sm={6} md={4}>
-              <Cards
-                heading="Compensatory"
-                subtext="Book, delete, edit and view Compensatory classes"
-                imageSrc="compensatory.png"
-                linkTo="/compensatory"
-              />
-            </Grid>
-            <Grid item xs={12} sm={6} md={4}>
-              <Cards
-                heading="User Management"
-                subtext="Edit user details and add users"
-                imageSrc="user.png"
-                linkTo="/user"
-              />
-            </Grid>
-            <Grid item xs={12} sm={6} md={4}>
-              <Cards
-                heading="Reports"
-                subtext="View generated or drafted timetables"
-                imageSrc="report.png"
-                linkTo="/report"
-              />
-            </Grid>
-            <Grid item xs={12} sm={6} md={4}>
-              <Cards
-                heading="Timetable Generation"
-                subtext="Generate timetables sectionwise or batchwise"
-                imageSrc="timetable.png"
-                linkTo="/generation"
-              />
-            </Grid>
-            <Grid item xs={12} sm={6} md={4}>
-              <Cards
-                heading="Teacher & Room Availability"
-                subtext="Check teacher and room availability"
-                imageSrc="availability.png"
-                linkTo="/availability"
-              />
-            </Grid>
+          Quickly navigate to all scheduling modules
+        </Typography>
+        <Divider sx={{ mb: 1 }} />
+
+        {/* Cards Grid */}
+        <Paper elevation={4} sx={{ p: 4, borderRadius: 2 }}>
+          <Grid container spacing={5} justifyContent="center">
+            {[
+              { heading: "Teacher Management", subtext: "Add, delete, edit and view teachers", imageSrc: "teacher.png", linkTo: "/teacher" },
+              { heading: "Room Management", subtext: "Add, delete, edit and view rooms", imageSrc: "room.png", linkTo: "/room" },
+              { heading: "Course Management", subtext: "Add, delete, edit and view courses", imageSrc: "course.png", linkTo: "/course" },
+              { heading: "Batch Management", subtext: "Manage batches", imageSrc: "batch.png", linkTo: "/batch" },
+              { heading: "Preferences & Constraints", subtext: "Set room & timing preferences", imageSrc: "preference.png", linkTo: "/preference" },
+              { heading: "Compensatory Classes", subtext: "Book & manage compensatory classes", imageSrc: "compensatory.png", linkTo: "/compensatory" },
+              { heading: "User Management", subtext: "Add or edit users", imageSrc: "user.png", linkTo: "/user" },
+              { heading: "Reports", subtext: "View generated timetables", imageSrc: "report.png", linkTo: "/report" },
+              { heading: "Timetable Generation", subtext: "Generate section‑ or batch‑wise timetables", imageSrc: "timetable.png", linkTo: "/generation" },
+              { heading: "Availability", subtext: "Check teacher & room availability", imageSrc: "availability.png", linkTo: "/availability" },
+            ].map((card) => (
+              <Grid key={card.heading} item xs={12} sm={6} md={4}>
+                <Cards {...card} />
+              </Grid>
+            ))}
           </Grid>
-        </Box>
-      </div>
-    </div>
+        </Paper>
+      </Container>
+    </Box>
   );
 }
-
-export default Dashboard;

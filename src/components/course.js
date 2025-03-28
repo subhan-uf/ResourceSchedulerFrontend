@@ -435,13 +435,11 @@ const tabLabels = isEditing
   />
 </FormControl>
 <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
- <Checkboxx
-   label="This is a Lab course"
-   checked={courseData.Credit_hours === '4'}
-   disabled
-    onChange={(checkedVal) => 
-      setCourseData({ ...courseData, Is_Lab: checkedVal })
-    }
+<Checkboxx
+  label="This is a Lab course"
+  checked={courseData.Credit_hours === '4'}
+  disabled
+  onChange={() => {}}
 />
 
   </Box>

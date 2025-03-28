@@ -1,26 +1,27 @@
-import * as React from 'react';
-import { AppProvider } from '@toolpad/core/AppProvider';
-import { useTheme } from '@mui/material/styles';
+import * as React from "react";
+import { AppProvider } from "@toolpad/core/AppProvider";
+import { useTheme } from "@mui/material/styles";
+import { Box, TextField, Typography, Button, Fade } from "@mui/material";
 
 export default function SignInbox({ signIn, role }) {
   const theme = useTheme();
-  const [username, setUsername] = React.useState('');
-  const [password, setPassword] = React.useState('');
+  const [username, setUsername] = React.useState("");
+  const [password, setPassword] = React.useState("");
   const [loading, setLoading] = React.useState(false);
-  const [error, setError] = React.useState('');
+  const [error, setError] = React.useState("");
 
   const handleSignIn = async () => {
-    setError('');  // Clear previous errors
+    setError(""); // Clear previous errors
     if (!username || !password) {
-      setError('Username and password are required.');
+      setError("Username and password are required.");
       return;
     }
     setLoading(true);
     try {
-      await signIn(username, password, role);  // Pass role for dynamic API endpoint
+      await signIn(username, password, role); // Pass role for dynamic API endpoint
     } catch (err) {
-      setError('Failed to sign in. Please check your credentials.');
-      console.error('Sign-in error:', err);
+      setError("Failed to sign in. Please check your credentials.");
+      console.error("Sign-in error:", err);
     } finally {
       setLoading(false);
     }
@@ -28,86 +29,128 @@ export default function SignInbox({ signIn, role }) {
 
   return (
     <AppProvider theme={theme}>
-      <div className="flex flex-col items-center justify-center min-h-fit bg-gray-50">
-        <div className="bg-white rounded-lg p-6 w-full max-w-md">
-          <h2 className="text-2xl font-semibold text-gray-700 mb-4 text-center">Sign In as {role}</h2>
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          minHeight: "60vh",
+          background: "linear-gradient(135deg, #e0f7fa, #e8f5e9)",
+          p: 2,
+        }}
+      >
+        <Fade in timeout={600}>
+          <Box
+            sx={{
+              width: "100%",
+              maxWidth: 400,
+              p: 4,
+              bgcolor: "transparent",
 
-          {error && (
-            <p className="text-red-500 text-sm text-center mb-4">{error}</p>
-          )}
-
-          <div className="mb-4">
-            <label htmlFor="username" className="block text-sm font-medium text-gray-600">
-              Username
-            </label>
-            <input
-              id="username"
-              type="text"
-              className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-700 focus:ring-2 focus:ring-blue-500 focus:outline-none"
-              placeholder="Enter your username"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-            />
-          </div>
-
-          <div className="mb-4">
-            <label htmlFor="password" className="block text-sm font-medium text-gray-600">
-              Password
-            </label>
-            <input
-              id="password"
-              type="password"
-              className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-700 focus:ring-2 focus:ring-blue-500 focus:outline-none"
-              placeholder="Enter your password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-          </div>
-
-          <button
-            onClick={handleSignIn}
-            className={`w-full bg-blue-500 text-white font-medium py-2 px-4 rounded-lg ${
-              loading ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-600'
-            } transition duration-300`}
-            disabled={loading}
+              borderRadius: 2,
+              boxShadow: "0px 24px 48px rgba(0, 0, 0, 0.1)",
+              position: "relative",
+              overflow: "hidden",
+              "&:before": {
+                content: '""',
+                position: "absolute",
+                top: 0,
+                left: 0,
+                right: 0,
+                height: 0,
+                background: "linear-gradient(90deg, #2196F3 0%, #4CAF50 100%)",
+              },
+            }}
           >
-            {loading ? 'Signing In...' : 'Sign In'}
-          </button>
-        </div>
-      </div>
+            <Typography
+              variant="h5"
+              sx={{
+                mb: 3,
+                fontWeight: 600,
+                textAlign: "center",
+                color: "text.primary",
+              }}
+            >
+              Sign In as {role}
+            </Typography>
+
+            {error && (
+              <Typography
+                variant="body2"
+                sx={{ color: "error.main", textAlign: "center", mb: 2 }}
+              >
+                {error}
+              </Typography>
+            )}
+
+            <Box sx={{ mb: 3 }}>
+              <TextField
+                fullWidth
+                variant="filled"
+                label="Username"
+                placeholder="Enter your username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                InputProps={{
+                  // disableUnderline: true,
+                  sx: {
+                    borderRadius: 1,
+                    bgcolor: "transparent",
+                    transition: "all 0.3s",
+                    "&:hover": { bgcolor: "action.hover" },
+                    "&.Mui-focused": {
+                      bgcolor: "background.paper",
+                      boxShadow: (theme) => `0 0 0 2px ${theme.palette.primary.main}`,
+                    },
+                  },
+                }}
+              />
+            </Box>
+
+            <Box sx={{ mb: 3 }}>
+              <TextField
+                fullWidth
+                variant="filled"
+                label="Password"
+                type="password"
+                placeholder="Enter your password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                InputProps={{
+                  // disableUnderline: true,
+                  sx: {
+                    borderRadius: 1,
+                    bgcolor: "transparent",
+                    transition: "all 0.3s",
+                    "&:hover": { bgcolor: "action.hover" },
+                    "&.Mui-focused": {
+                      bgcolor: "background.paper",
+                      boxShadow: (theme) => `0 0 0 2px ${theme.palette.primary.main}`,
+                    },
+                  },
+                }}
+              />
+            </Box>
+
+            <Button
+              onClick={handleSignIn}
+              fullWidth
+              variant="contained"
+              disabled={loading}
+              sx={{
+                py: 1.5,
+                borderRadius: 2,
+                transition: "background-color 0.3s, transform 0.2s",
+                ...(loading
+                  ? { opacity: 0.7 }
+                  : { "&:hover": { transform: "translateY(-2px)" } }),
+              }}
+            >
+              {loading ? "Signing In..." : "Sign In"}
+            </Button>
+          </Box>
+        </Fade>
+      </Box>
     </AppProvider>
   );
 }
-
-
-
-// import * as React from 'react';
-// import { AppProvider } from '@toolpad/core/AppProvider';
-// import { SignInPage } from '@toolpad/core/SignInPage';
-// import { useTheme } from '@mui/material/styles';
-
-// const providers = [{ id: 'credentials', name: 'Username and Password' }];
-
-// export default function SignInbox({signIn}) {
-//   const theme = useTheme();
-//   return (
-//     <AppProvider theme={theme}>
-//       <SignInPage
-//         signIn={(provider, formData) =>{
-//           const username = formData.get('Username')
-//           const password= formData.get('password')
-//           signIn(username,password)
-//         }
-         
-          
-//         }
-//         slotProps={{
-//           emailField: {label:'Username', variant: 'standard' },
-//           passwordField: { variant: 'standard' },
-//           submitButton: { variant: 'outlined' },
-//         }}
-//         providers={providers}
-//       />
-//     </AppProvider>
-//   );
-// }

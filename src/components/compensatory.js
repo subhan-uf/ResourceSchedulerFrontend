@@ -831,9 +831,12 @@ const getDayIndex = (day) => {
       
       
     
-      const tabLabels = isEditing 
-      ? ["View list of Compensatory classes", "Editing Compensatory class"] 
-      : ["View list of Compensatory classes", "Enter new Compensatory class"];    const tabContent = [
+      const tabLabels = [
+        "View list of Compensatory classes",
+        isEditing ? "Editing Compensatory class" : "Enter new Compensatory class",
+        "View Timetable"
+      ];
+      const tabContent = [
         <>
         <Box sx={{ mb: 2, maxWidth: 200 }}>
         <TextField

@@ -496,14 +496,15 @@ const [snackbarColor, setSnackbarColor] = useState('neutral'); // success, dange
           
           onClick={handleStopEditing}
           sx={{
-            position: 'absolute',
-            top: 40,
-            right: 16,
+            position: 'fixed',
+            top: 120,
+            right: 200,
             zIndex: 1000,
             borderRadius: 2,
             boxShadow: 2,
             px: 3,
-            py: 1
+            py: 1,
+                  backdropFilter: 'blur(4px)'
           }}
         >
           Stop Editing

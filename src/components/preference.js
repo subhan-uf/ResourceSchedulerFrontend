@@ -175,15 +175,18 @@ const [searchCourseQuery, setSearchCourseQuery] = useState("");
       return;
     }
     try {
+      
       // Ensure availableSections is loaded
       if (availableSections.length === 0) {
         await fetchAvailableSections();
       }
+      console.log("NIGGA")
       // First: Fetch teacher's course assignments using string comparison
       const tcaResp = await teacherCourseAssignmentService.getAllAssignments();
       const teacherTCAs = tcaResp.data.filter(
         (tca) => tca.Teacher_ID.toString() === teacherId.toString()
       );
+      console.log(tcaResp)
       const coursesForTeacher = [];
       teacherTCAs.forEach((tca) => {
         const cid = tca.Course_ID.toString();
@@ -406,6 +409,11 @@ const [searchCourseQuery, setSearchCourseQuery] = useState("");
   // -----------------------------
   // SUBMIT => create or update
   // -----------------------------
+  const convertTimeToMinutes = (timeStr) => {
+    const [hours, minutes] = timeStr.split(":").map(Number);
+    return hours * 60 + minutes;
+  };
+  
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!selectedTeacherId) {
@@ -587,6 +595,7 @@ const [searchCourseQuery, setSearchCourseQuery] = useState("");
   // Dynamic form fields – changes:
   // 1. Removed "Select Date" field and replaced with "Day" field (options: Monday–Saturday)
   // 2. Added a Section field right after Course that filters options based on the selected course in the first row.
+  console.log(teacherCourses)
   const fieldsTime = [
     {
       componentType: "SingleDropdown",
@@ -638,66 +647,65 @@ const [searchCourseQuery, setSearchCourseQuery] = useState("");
       componentType: "SingleDropdown",
       label: "Day",
       name: "day",
-      options: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
+      options: (() => {
+        const selectedCourse = timePreferences[0]?.values.course || "";
+        const selectedSection = timePreferences[0]?.values.section || "";
+        const selectedType = timePreferences[0]?.values.labOrTheory || "";
+        if (!selectedCourse || !selectedSection || !selectedType) return [];
+        return ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+      })(),
       getOptionLabel: (val) => val,
     },
+    
+    
     {
       componentType: "SingleDropdown",
       label: "Start time",
       name: "startTime",
-      options: ["08:30", "09:20", "10:10", "11:30", "12:20", "02:00", "02:50", "03:40"],
+      options: (() => {
+        const selectedCourse = timePreferences[0]?.values.course || "";
+        const selectedSection = timePreferences[0]?.values.section || "";
+        const selectedType = timePreferences[0]?.values.labOrTheory || "";
+        if (!selectedCourse || !selectedSection || !selectedType) return [];
+        const base = ["08:30", "09:20", "10:10", "11:30", "12:20", "02:00", "02:50", "03:40"];
+        const isLab = selectedType === "lab";
+        return isLab ? base.filter(t => t !== "10:10" && t !== "12:20") : base;
+      })(),
     },
+    
+    
+    
     {
       componentType: "SingleDropdown",
       label: "End time",
       name: "endTime",
-      // Dynamically compute options based on the selected start time.
-      // The dropdown remains empty (or shows no options) until a start time is selected.
       options: (() => {
-        // Define the available start times and corresponding end times.
-        // Adjust these arrays so they reflect your actual schedule and breaks.
+        const selectedCourse = timePreferences[0]?.values.course || "";
+        const selectedSection = timePreferences[0]?.values.section || "";
+        const selectedType = timePreferences[0]?.values.labOrTheory || "";
+        if (!selectedCourse || !selectedSection || !selectedType) return [];
         const startTimes = ["08:30", "09:20", "10:10", "11:30", "12:20", "02:00", "02:50", "03:40"];
         const endTimes   = ["09:20", "10:10", "11:00", "12:20", "01:10", "02:50", "03:40", "04:30"];
-        
-        // Get the selected start time from the first preference (if any)
-        const start = (timePreferences.length > 0 && timePreferences[0].values.startTime) || "";
-        if (!start) return []; // no start time selected: return an empty array
-        
+        const start = timePreferences[0]?.values.startTime || "";
+        if (!start) return [];
         const idx = startTimes.indexOf(start);
         if (idx === -1) return [];
-        
-        // Define your rule:
-        // - The available end time options should be the immediate next slot,
-        //   and (if applicable) the one after that unless a break occurs.
-        // For example, if start is "08:30" (index 0), then available end times are "09:20" and "10:10".
-        // But if start is "10:10" (index 2) and a break is in effect (e.g. 11:00–11:30), then only allow the immediate next.
-        
-        // (You can adjust the following logic as needed.)
-        let options = [];
-        
-        // If the selected start time is "10:10", only allow the next slot.
-        if (start === "10:10") {
-          if (idx + 1 < endTimes.length) {
-            options.push(endTimes[idx ]);
-          }
-        } else if (start === "12:20") {
-          if (idx + 1 < endTimes.length) {
-            options.push(endTimes[idx ]);
-          }
+        const isLab = selectedType === "lab";
+        const options = [];
+        if (isLab) {
+          // For Lab: skip the immediate next slot and use the following one
+          if (idx + 2 < endTimes.length) options.push(endTimes[idx + 1]);
+        } else {
+          // For Theory: provide the next slot(s)
+          if (idx + 1 < endTimes.length) options.push(endTimes[idx]);
+          if (idx + 2 < endTimes.length) options.push(endTimes[idx + 1]);
         }
-        else {
-          // Otherwise, allow the next one or two slots (if available).
-          if (idx + 1 <= endTimes.length) {
-            options.push(endTimes[idx ]);
-          }
-          if (idx + 2 <= endTimes.length) {
-            options.push(endTimes[idx + 1]);
-          }
-        }
-        
         return options;
       })(),
     },
+    
+    
+    
     
     {
       componentType: "Checkbox",
@@ -788,6 +796,7 @@ const [searchCourseQuery, setSearchCourseQuery] = useState("");
                 value: t.Teacher_ID,
               }))}
               onChange={(newVal) => {
+                console.log(newVal)
                 setSelectedTeacherId(newVal);
                 handleTeacherChange(newVal);
               }}

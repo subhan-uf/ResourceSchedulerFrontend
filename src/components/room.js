@@ -278,8 +278,8 @@ function Room() {
               margin: "0 auto",
               padding: 4,
               borderRadius: 2,
-              boxShadow: 4,
-              backgroundColor: "#f5f5f5",
+              // boxShadow: 4,
+              backgroundColor: "transparent",
             }}
           >
             <TextField

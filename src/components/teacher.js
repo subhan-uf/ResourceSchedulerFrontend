@@ -528,6 +528,13 @@ const getAvailableCoursesForMapping = (sectionId, courseType, currentIndex) => {
   };
   const handleSubmit = async (e) => {
     e.preventDefault();
+    const validMappings = assignmentMappings.filter(mapping => 
+      mapping.sectionId && mapping.courseType && mapping.courseId
+    );
+    if (validMappings.length === 0) {
+      showSnackbar("At least one assignment must be provided.", "danger");
+      return;
+    }
     const teacherPayload = {
       Teacher_ID: parseInt(formData.Teacher_ID, 10),
       Name: formData.Name,
@@ -571,25 +578,14 @@ const getAvailableCoursesForMapping = (sectionId, courseType, currentIndex) => {
 
       // 3) RE-CREATE TCA
       // labCourses => teacher_type="lab"
-      for (const cid of selectedLabCourses) {
-        const tcaPayload = {
-          Assignment_ID: Math.floor(Math.random() * 100000),
-          Teacher_ID: teacherPayload.Teacher_ID,
-          Course_ID: cid,
-          Teacher_type: "lab",
-        };
-        await teacherCourseAssignmentService.createAssignment(tcaPayload);
-      }
-      // theoryCourses => teacher_type="theory"
-      for (const cid of selectedTheoryCourses) {
-        const tcaPayload = {
-          Assignment_ID: Math.floor(Math.random() * 100000),
-          Teacher_ID: teacherPayload.Teacher_ID,
-          Course_ID: cid,
-          Teacher_type: "theory",
-        };
-        await teacherCourseAssignmentService.createAssignment(tcaPayload);
-      }
+       for (const { sectionId, courseType, courseId } of assignmentMappings) {
+           if (!courseId || !courseType) continue;
+           await teacherCourseAssignmentService.createAssignment({
+             Teacher_ID: teacherPayload.Teacher_ID,
+             Course_ID: courseId,
+             Teacher_type: courseType,
+           });
+         }
 
       // 4) RE-CREATE BCTA
       // for each selected batch => for each selected lab course => create BCTA w/ Course_type="lab"
@@ -613,7 +609,8 @@ for (const mapping of assignmentMappings) {
   await batchCourseTeacherAssignmentService.createAssignment(bctaPayload);
 }
 
-
+const updatedBCTAs = await batchCourseTeacherAssignmentService.getAllAssignments();
+setBctaAssignments(updatedBCTAs.data);
 
       fetchTeachers();
       resetForm();
@@ -700,8 +697,8 @@ for (const mapping of assignmentMappings) {
             margin: "0 auto",
             padding: 4,
             borderRadius: 2,
-            boxShadow: 4,
-            backgroundColor: "#f5f5f5",
+            // boxShadow: 4,
+            backgroundColor: "transparent",
           }}
         >
           <TextField
