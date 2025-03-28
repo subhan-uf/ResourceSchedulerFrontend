@@ -152,6 +152,7 @@ function DynamicForm({
                       type={type}
                       fullWidth
                       value={value}
+                      required={field.required || false}
                       onChange={(e) => handleFieldChange(section.id, name, e.target.value)}
                       sx={{ mb: 2 }}
                       InputProps={{
@@ -187,6 +188,7 @@ function DynamicForm({
                       <Select
                         value={value}
                         label={label}
+                        required={field.required || false}
                         onChange={(e) => handleFieldChange(section.id, name, e.target.value)}
                         variant="filled"
                         sx={{
@@ -235,7 +237,7 @@ function DynamicForm({
 
                 case "RadioGroup":
                   return (
-                    <FormControl key={idx} component="fieldset" sx={{ mb: 2 }}>
+                    <FormControl key={idx} component="fieldset" sx={{ mb: 2 }} required={field.required || false}>
                       <Typography variant="caption" sx={{ 
                         mb: 1.5,
                         display: 'block',

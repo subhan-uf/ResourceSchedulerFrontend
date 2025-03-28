@@ -63,7 +63,7 @@ const [searchCourseQuery, setSearchCourseQuery] = useState("");
     "Teacher (ID - Name)",
     "Course Name",
     "Day",
-    "Section",
+    "Batch - Section",
     "Start Time",
     "End Time",
     "Lab or Theory",
@@ -180,13 +180,13 @@ const [searchCourseQuery, setSearchCourseQuery] = useState("");
       if (availableSections.length === 0) {
         await fetchAvailableSections();
       }
-      console.log("NIGGA")
+      
       // First: Fetch teacher's course assignments using string comparison
       const tcaResp = await teacherCourseAssignmentService.getAllAssignments();
       const teacherTCAs = tcaResp.data.filter(
         (tca) => tca.Teacher_ID.toString() === teacherId.toString()
       );
-      console.log(tcaResp)
+      
       const coursesForTeacher = [];
       teacherTCAs.forEach((tca) => {
         const cid = tca.Course_ID.toString();
@@ -398,7 +398,7 @@ const [searchCourseQuery, setSearchCourseQuery] = useState("");
         },
       };
 
-      console.log(singlePref.values);
+      // console.log(singlePref.values);
       setTimePreferences([singlePref]);
     } catch (error) {
       console.error("Error fetching course/time for edit:", error);
@@ -420,6 +420,11 @@ const [searchCourseQuery, setSearchCourseQuery] = useState("");
       showSnackbar("Please select a teacher first.", "danger");
       return;
     }
+    if (preferredFloor.trim() === "" && timePreferences.length === 0) {
+      showSnackbar("Please select either a Floor Constraint or add a Time Preference.", "danger");
+      return;
+    }
+    
     try {
       if (isEditing) {
         if (editType === "room") {
@@ -451,7 +456,24 @@ const [searchCourseQuery, setSearchCourseQuery] = useState("");
             showSnackbar("Error: This teacher cannot teach theory for this course!", "danger");
             return;
           }
-
+          
+            const duplicate = coursePrefs.find((cp) => {
+              // Get the record's unique id (could be Preference_ID or CoursePref_ID)
+              const cpId = cp.Preference_ID || cp.CoursePref_ID;
+              // Exclude the record being edited
+              if (cpId === editingId) return false;
+              return cp.Section.toString() === section.toString() &&
+                     cp.Day === day &&
+                     (cp.Start_time.slice(0, -3) === startTime || cp.End_time.slice(0, -3) === endTime) &&
+                     cp.Hard_constraint === true &&
+                     cp.Lab_or_Theory === labOrTheory;
+            });
+            if (duplicate) {
+              console.log("Duplicate found during edit:", duplicate);
+              showSnackbar("Another hard preference is already set at this time.", "danger");
+              return; // Stop processing the submission
+            }
+          
           const ctpPayload = {
             Teacher_ID: parseInt(selectedTeacherId, 10),
             Course_ID: parseInt(course, 10),
@@ -478,39 +500,62 @@ const [searchCourseQuery, setSearchCourseQuery] = useState("");
           };
           await roomPreferenceService.create(rpPayload);
         }
-        for (const sec of timePreferences) {
-          const { course, section, day, startTime, endTime, multimedia, speaker, hard_constraint, labOrTheory } = sec.values;
-          if (!labOrTheory) continue;
-          const teacherCourseObj = teacherCourses.find((tc) => tc.courseID === course);
-          if (!teacherCourseObj) {
-            showSnackbar("Teacher does not teach the chosen course!", "danger");
-            return;
-          }
-          if (labOrTheory === "lab" && !teacherCourseObj.canLab) {
-            showSnackbar("Error: This teacher cannot teach lab for this course!", "danger");
-            return;
-          }
-          if (labOrTheory === "theory" && !teacherCourseObj.canTheory) {
-            showSnackbar("Error: This teacher cannot teach theory for this course!", "danger");
-            return;
-          }
+for (const sec of timePreferences) {
+  // Set default to false in case it's not defined
+  const { course, section, day, startTime, endTime, multimedia, speaker, hard_constraint = false, labOrTheory } = sec.values;
+  if (!labOrTheory) continue;
+  
+  // Check for duplicate only if this new entry is a hard constraint
 
-          const ctpPayload = {
-            Teacher_ID: parseInt(selectedTeacherId, 10),
-            Course_ID: parseInt(course, 10),
-            Section: section,
-            Day: day,
-            Start_time: startTime,
-            End_time: endTime,
-            Status: "Scheduled",
-            Lab_or_Theory: labOrTheory,
-            Multimedia_requirement: !!multimedia,
-            Speaker: !!speaker,
-            Hard_constraint: !!hard_constraint,
-          };
-          console.log(ctpPayload)
-          await courseTimePreferenceService.create(ctpPayload);
-        }
+    
+    const duplicate = coursePrefs.find((cp) =>
+      cp.Section.toString() === section.toString() &&
+      cp.Day === day &&
+      (cp.Start_time.slice(0, -3) === startTime || cp.End_time.slice(0, -3) === endTime) &&
+      cp.Hard_constraint === true &&
+      cp.Lab_or_Theory === labOrTheory
+    );
+
+    
+    if (duplicate) {
+      console.log("Duplicate found:", duplicate);
+      showSnackbar("Another hard preference is already set at this time.", "danger");
+      return; // Stop processing the submission
+    }
+  
+
+  
+  // Continue with your existing teacher course validation:
+  const teacherCourseObj = teacherCourses.find((tc) => tc.courseID === course);
+  if (!teacherCourseObj) {
+    showSnackbar("Teacher does not teach the chosen course!", "danger");
+    return;
+  }
+  if (labOrTheory === "lab" && !teacherCourseObj.canLab) {
+    showSnackbar("Error: This teacher cannot teach lab for this course!", "danger");
+    return;
+  }
+  if (labOrTheory === "theory" && !teacherCourseObj.canTheory) {
+    showSnackbar("Error: This teacher cannot teach theory for this course!", "danger");
+    return;
+  }
+  
+  const ctpPayload = {
+    Teacher_ID: parseInt(selectedTeacherId, 10),
+    Course_ID: parseInt(course, 10),
+    Section: section,
+    Day: day,
+    Start_time: startTime,
+    End_time: endTime,
+    Status: "Scheduled",
+    Lab_or_Theory: labOrTheory,
+    Multimedia_requirement: !!multimedia,
+    Speaker: !!speaker,
+    Hard_constraint: !!hard_constraint,
+  };
+  await courseTimePreferenceService.create(ctpPayload);
+}
+
         showSnackbar("Preferences created successfully!", "success");
         fetchRoomPrefs();
         fetchCoursePrefs();
@@ -579,11 +624,23 @@ const [searchCourseQuery, setSearchCourseQuery] = useState("");
       : `${cp.Teacher_ID} - ???`;
     const cObj = courses.find((c) => c.Course_ID.toString() === cp.Course_ID.toString());
     const courseName = cObj ? cObj.Course_name : `Unknown(${cp.Course_ID})`;
+    const sectionObj = availableSections.find(
+      (s) => s.Section_ID.toString() === cp.Section.toString()
+    );
+    // NEW: Find the corresponding batch using batches state
+    const batchObj = sectionObj ? batches.find(
+      (b) => b.Batch_ID.toString() === sectionObj.Batch_ID.toString()
+    ) : null;
+    // NEW: Create display string "Batch_name - Section_name"
+    const sectionDisplay = sectionObj
+      ? `${batchObj ? batchObj.Batch_name : ''} - ${sectionObj.Section_name}`
+      : cp.Section;
     return [
       pk,
       teacherLabel,
       courseName,
       cp.Day, // Day value
+      sectionDisplay,
       cp.Start_time,
       cp.End_time,
       cp.Lab_or_Theory,
@@ -595,12 +652,13 @@ const [searchCourseQuery, setSearchCourseQuery] = useState("");
   // Dynamic form fields – changes:
   // 1. Removed "Select Date" field and replaced with "Day" field (options: Monday–Saturday)
   // 2. Added a Section field right after Course that filters options based on the selected course in the first row.
-  console.log(teacherCourses)
+  // console.log(teacherCourses)
   const fieldsTime = [
     {
       componentType: "SingleDropdown",
       label: "Course",
       name: "course",
+      required: true,
       options: teacherCourses.map((tc) => tc.courseID),
       getOptionLabel: (cid) => {
         const obj = teacherCourses.find((tc) => tc.courseID === cid);
@@ -611,6 +669,7 @@ const [searchCourseQuery, setSearchCourseQuery] = useState("");
       componentType: "SingleDropdown",
       label: "Section",
       name: "section",
+      required: true,
       // Compute options dynamically based on the selected course in the first row
       options: (() => {
         const selectedCourse =
@@ -638,6 +697,7 @@ const [searchCourseQuery, setSearchCourseQuery] = useState("");
       componentType: "RadioGroup",
       label: "Class Type (Lab or Theory)",
       name: "labOrTheory",
+      required: true,
       options: [
         { label: "Lab", value: "lab" },
         { label: "Theory", value: "theory" },
@@ -647,6 +707,7 @@ const [searchCourseQuery, setSearchCourseQuery] = useState("");
       componentType: "SingleDropdown",
       label: "Day",
       name: "day",
+      required: true,
       options: (() => {
         const selectedCourse = timePreferences[0]?.values.course || "";
         const selectedSection = timePreferences[0]?.values.section || "";
@@ -662,6 +723,7 @@ const [searchCourseQuery, setSearchCourseQuery] = useState("");
       componentType: "SingleDropdown",
       label: "Start time",
       name: "startTime",
+      required: true,
       options: (() => {
         const selectedCourse = timePreferences[0]?.values.course || "";
         const selectedSection = timePreferences[0]?.values.section || "";
@@ -669,7 +731,7 @@ const [searchCourseQuery, setSearchCourseQuery] = useState("");
         if (!selectedCourse || !selectedSection || !selectedType) return [];
         const base = ["08:30", "09:20", "10:10", "11:30", "12:20", "02:00", "02:50", "03:40"];
         const isLab = selectedType === "lab";
-        return isLab ? base.filter(t => t !== "10:10" && t !== "12:20") : base;
+        return isLab ? base.filter(t => t !== "10:10" && t !== "12:20" && t !== "03:40") : base;
       })(),
     },
     
@@ -679,6 +741,7 @@ const [searchCourseQuery, setSearchCourseQuery] = useState("");
       componentType: "SingleDropdown",
       label: "End time",
       name: "endTime",
+      required: true,
       options: (() => {
         const selectedCourse = timePreferences[0]?.values.course || "";
         const selectedSection = timePreferences[0]?.values.section || "";
@@ -694,11 +757,15 @@ const [searchCourseQuery, setSearchCourseQuery] = useState("");
         const options = [];
         if (isLab) {
           // For Lab: skip the immediate next slot and use the following one
-          if (idx + 2 < endTimes.length) options.push(endTimes[idx + 1]);
+          if (idx + 1 < endTimes.length) options.push(endTimes[idx + 1]);
         } else {
           // For Theory: provide the next slot(s)
-          if (idx + 1 < endTimes.length) options.push(endTimes[idx]);
-          if (idx + 2 < endTimes.length) options.push(endTimes[idx + 1]);
+          if (start === "10:10" || start === "12:20") {
+            if (idx + 1 < endTimes.length) options.push(endTimes[idx ]);
+          } else {
+            if (idx < endTimes.length) options.push(endTimes[idx]);
+            if (idx + 1 < endTimes.length) options.push(endTimes[idx + 1]);
+          }
         }
         return options;
       })(),
@@ -781,8 +848,8 @@ const [searchCourseQuery, setSearchCourseQuery] = useState("");
             margin: "0 auto",
             padding: 4,
             borderRadius: 2,
-            boxShadow: 4,
-            backgroundColor: "#f5f5f5",
+            // boxShadow: 4,
+            backgroundColor: "transparent",
           }}
         >
           {/* Teacher */}
