@@ -28,9 +28,12 @@ function Login() {
         console.log("Login Successful", response.data);
         localStorage.setItem("accessToken", response.data.access);
         localStorage.setItem("refreshToken", response.data.refresh);
+        localStorage.setItem("user", JSON.stringify({ username: response.data.username }));
+
         window.dispatchEvent(new Event("storage"));
 
         console.log("Access Token Saved:", response.data.access);
+        console.log(`Logged in as ${role}`);
 
         // Show success snackbar
         setSnackbar({

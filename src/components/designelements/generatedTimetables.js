@@ -13,6 +13,7 @@ const GeneratedTimetables = ({ onEditGeneration }) => {
 const [selectedGenId, setSelectedGenId] = useState(null);
 const [snackbarOpen, setSnackbarOpen] = useState(false);
 const [snackbarMessage, setSnackbarMessage] = useState('');  
+
 const fetchGenerations = async () => {
     setLoading(true);
     try {
@@ -42,6 +43,8 @@ const fetchGenerations = async () => {
     }
   };
 
+  
+  
   useEffect(() => {
     fetchGenerations();
   }, []);
@@ -89,49 +92,57 @@ const fetchGenerations = async () => {
         <CircularProgress />
       ) : (
         <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>Generation ID</TableCell>
-              <TableCell>Description</TableCell>
-              <TableCell>Status</TableCell>
-              <TableCell>Time Generated</TableCell>
-              <TableCell>Actions</TableCell>
-            </TableRow>
-          </TableHead>
+<TableHead>
+  <TableRow>
+    <TableCell>Generation ID</TableCell>
+    <TableCell>Description</TableCell>
+    <TableCell>Status</TableCell>
+    <TableCell>Time Generated</TableCell>
+    <TableCell>Last Edited By</TableCell>
+    <TableCell>Actions</TableCell>
+  </TableRow>
+</TableHead>
           <TableBody>
-            {generations.map((gen) => (
-              <TableRow key={gen.Generation_ID}>
-                <TableCell>{gen.Generation_ID}</TableCell>
-                <TableCell>{gen.Description || "N/A"}</TableCell>
-                <TableCell>
-                  <Chip 
-                    label={getDisplayStatus(headerStatuses[gen.Generation_ID])} 
-                    color={getStatusColor(headerStatuses[gen.Generation_ID])} 
-                    size="small" 
-                  />
-                </TableCell>
-                <TableCell>{new Date(gen.Time_Generated).toLocaleString()}</TableCell>
-                <TableCell>
-                  <Button
-                    variant="outlined"
-                    onClick={() => onEditGeneration(gen)}
-                    sx={{ mr: 1 }}
-                  >
-                    View/Edit
-                  </Button>
-                  <Button
-                    variant="outlined"
-                    color="error"
-                    onClick={() => {
-                      setSelectedGenId(gen.Generation_ID);
-                      setDeleteModalOpen(true);
-                    }}
-                  >
-                    Delete
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))}
+          {generations.map((gen) => (
+  <TableRow key={gen.Generation_ID}>
+    <TableCell>{gen.Generation_ID}</TableCell>
+    <TableCell>{gen.Description || "N/A"}</TableCell>
+    <TableCell>
+      <Chip 
+        label={getDisplayStatus(headerStatuses[gen.Generation_ID])} 
+        color={getStatusColor(headerStatuses[gen.Generation_ID])} 
+        size="small" 
+      />
+    </TableCell>
+    <TableCell>{new Date(gen.Time_Generated).toLocaleString()}</TableCell>
+    <TableCell>
+  {gen.last_edited_by || "N/A"}
+</TableCell>
+
+
+
+    <TableCell>
+      <Button
+        variant="outlined"
+        onClick={() => onEditGeneration(gen)}
+        sx={{ mr: 1 }}
+      >
+        View/Edit
+      </Button>
+      <Button
+        variant="outlined"
+        color="error"
+        onClick={() => {
+          setSelectedGenId(gen.Generation_ID);
+          setDeleteModalOpen(true);
+        }}
+      >
+        Delete
+      </Button>
+    </TableCell>
+  </TableRow>
+))}
+
           </TableBody>
         </Table>
       )}
