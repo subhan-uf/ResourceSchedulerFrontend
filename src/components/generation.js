@@ -20,6 +20,7 @@ import apiClient from "./api/apiClient";
 import CustomSnackbar from "./designelements/alert";
 import { TextField } from "@mui/material"; 
 import AlertDialogModal from "./designelements/modal";
+import roomPreferenceService from "./api/roomPreferenceService";
 
 const alternateDayMap = {
   0: [2],     // Monday (0) cannot be disabled with Wednesday (2)
@@ -82,6 +83,7 @@ const [snackbarColor, setSnackbarColor] = useState("neutral"); // neutral, succe
   const [loading, setLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [saveLoading, setSaveLoading] = useState(false);
+  const [roomPrefs, setRoomPrefs] = useState([]);
 
   // Save the timetable status ("draft" or "published") that triggered the modal
   const [timetableStatus, setTimetableStatus] = useState("");
@@ -108,6 +110,7 @@ const [currentAcademicYear, setCurrentAcademicYear] = useState(
           tcaRes,
           bctaRes,
           coursePrefsRes,
+          roomPrefsRes
         ] = await Promise.all([
           teacherService.getAllTeachers(),
           roomService.getAllRooms(),
@@ -116,7 +119,8 @@ const [currentAcademicYear, setCurrentAcademicYear] = useState(
           courseService.getAllCourses(),
           teacherCourseAssignmentService.getAllAssignments(),
           batchCourseTeacherAssignmentService.getAllAssignments(),
-          coursePreferenceService.getAll(), // fetch time preferences
+          coursePreferenceService.getAll(),
+          roomPreferenceService.getAll()  // fetch time preferences
         ]);
 
         // console.log("Fetched Teachers:", teachRes.data);
@@ -126,6 +130,7 @@ const [currentAcademicYear, setCurrentAcademicYear] = useState(
         // console.log("Fetched Courses:", courseRes.data);
         // console.log("Fetched TCA:", tcaRes.data);
         // console.log("Fetched BCTA:", bctaRes.data);
+        setRoomPrefs(roomPrefsRes.data || []);
 
         setTeachers(teachRes.data || []);
         setRooms(
@@ -169,11 +174,17 @@ const [currentAcademicYear, setCurrentAcademicYear] = useState(
         id: tid,
         name: teacher.Name,
         assignments: [],
-        floor_pref: teacher.room_pref
-          ? [teacher.room_pref.Floor, teacher.room_pref.is_hard]
-          : [null, false],
+        floor_pref: (() => {
+          const teacherRoomPref = roomPrefs.find(rp => String(rp.Teacher_ID) === tid);
+          return teacherRoomPref
+            ? teacherRoomPref.Floor.toLowerCase() === 'ground'
+                ? [0, true]
+                : [teacherRoomPref.Floor, teacherRoomPref.is_hard]
+            : [null, false];
+        })(),
         time_prefs: [],
       };
+      
     });
     tcaList.forEach((tca) => {
       const teacherObj = tca.Teacher_ID;
@@ -1091,14 +1102,8 @@ const detailPayload = {
       Day: detail.Day,
       Start_time: normalizeTime(detail.Start_time || detail.Start_Time || ""),
       End_time: normalizeTime(detail.End_time || detail.End_Time || ""),
-      Locked: lockedSlots.includes(slotKey) ||
-      generatedData.timetable_details.some(oldDetail =>
-        oldDetail.Locked &&
-        oldDetail.Day === detail.Day &&
-        normalizeTime(oldDetail.Start_time || oldDetail.Start_Time) === normalizeTime(detail.Start_time || detail.Start_Time) &&
-        normalizeTime(oldDetail.End_time   || oldDetail.End_Time)   === normalizeTime(detail.End_time   || detail.End_Time) &&
-        Number(oldDetail.Teacher_ID) === Number(detail.Teacher_ID)
-      ),
+      Locked: lockedSlots.includes(slotKey),
+
       Teacher_pref_status: detail.Teacher_pref_status || "",
       Theory_or_Lab: detail.Theory_or_Lab,
       Hard_slot: detail.Hard_slot || false,
@@ -1158,7 +1163,7 @@ const detailPayload = {
             Day: detail.Day,
             Start_time: normalizeTime(detail.Start_time || detail.Start_Time || ""),
             End_time: normalizeTime(detail.End_time || detail.End_Time || ""),
-            Locked: isLocked,
+            Locked: lockedSlots.includes(slotKey),
             Teacher_pref_status: detail.Teacher_pref_status || "",
             Theory_or_Lab: detail.Theory_or_Lab,
             Hard_slot: detail.Hard_slot || false,
@@ -1292,7 +1297,7 @@ const detailPayload = {
                       </div>
                       <Box sx={{ mt: 1, textAlign: "right", width: "100%", maxWidth: "4xl", px: 2 }}>
                         <Typography variant="caption">
-                          Last edited by: {header.last_edited_by ? header.last_edited_by.username : "N/A"}
+                          Last edited by: {header.last_edited_by }
                         </Typography>
                       </Box>
                     </Box>

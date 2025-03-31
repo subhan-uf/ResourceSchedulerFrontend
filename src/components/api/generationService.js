@@ -2,7 +2,7 @@
 import apiClient from './apiClient';
 import axios from 'axios';
 
-const GENERATION_API_URL = 'https://832c-34-75-26-28.ngrok-free.app/solve';
+const GENERATION_API_URL = 'https://297c-34-74-174-20.ngrok-free.app/solve';
 
 const generateTimetable = async (generationData) => {
   try {
