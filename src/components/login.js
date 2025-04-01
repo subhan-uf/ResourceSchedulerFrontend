@@ -28,7 +28,7 @@ function Login() {
         console.log("Login Successful", response.data);
         localStorage.setItem("accessToken", response.data.access);
         localStorage.setItem("refreshToken", response.data.refresh);
-        localStorage.setItem("user", JSON.stringify({ username: response.data.username }));
+        localStorage.setItem("user", JSON.stringify({ username: response.data.username, role: role }));
 
         window.dispatchEvent(new Event("storage"));
 

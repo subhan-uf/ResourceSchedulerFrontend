@@ -830,7 +830,13 @@ const getDayIndex = (day) => {
       
       
       
-    
+      const publishedTimetableExists = sectionTimetableDetails && sectionTimetableDetails.length > 0;
+      const compensatoryMessage = (
+        <Box sx={{ p: 2, textAlign: 'center' }}>
+          Please Generate and publish a Timetable in order to book a compensatory class
+        </Box>
+      );
+      
       const tabLabels = [
         "View list of Compensatory classes",
         isEditing ? "Editing Compensatory class" : "Enter new Compensatory class",
@@ -849,7 +855,9 @@ const getDayIndex = (day) => {
         <Tables tableHeadings={tableHeadings} tableRows={tableRows}  onEdit={(rowData) => handleEditClick(rowData[rowData.length - 1])}
         onDelete={(rowData) => handleDeleteClick(rowData[rowData.length - 1])}/>
         </>
-        ,<div>
+        ,
+        publishedTimetableExists ? (
+        <div>
             <form onSubmit={handleSubmit}>
                 <Box
                     sx={{
@@ -860,8 +868,8 @@ const getDayIndex = (day) => {
                         margin: '0 auto',
                         padding: 4,
                         borderRadius: 2,
-                        boxShadow: 4,
-                        backgroundColor: '#f5f5f5',
+                        // boxShadow: 4,
+                        backgroundColor: 'transparent',
                     }}
                 >
 
@@ -1094,8 +1102,13 @@ const getDayIndex = (day) => {
 
                 </Box>
             </form>
-        </div>,
+        </div>
+         ) : (
+          compensatoryMessage
+        )
+        ,
         // Third Tab Content (View-only timetable)
+        publishedTimetableExists ? (
 <div>
 <Box sx={{ maxWidth: 700, margin: '0 auto' }}> 
   <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
@@ -1161,7 +1174,9 @@ const getDayIndex = (day) => {
   )}
   </Box>
 </div>
-
+ ) : (
+  compensatoryMessage
+)
         ,
     ];
 

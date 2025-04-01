@@ -674,6 +674,22 @@ if (targetDetail && targetDetail.Course_ID) {
   const handleGenerate = async () => {
     try {
       setLoading(true);
+      if (tcaList.length === 0 && bctaList.length === 0) {
+        setSnackbarMessage("No teacher has been assigned to any batch and course.");
+        setSnackbarColor("danger");
+        setSnackbarOpen(true);
+        setLoading(false);
+        return; // Stop further processing
+      }
+      
+      // Check if no rooms exist (both classroom and lab rooms)
+      if (rooms.length === 0 && labRooms.length === 0) {
+        setSnackbarMessage("No rooms exists.");
+        setSnackbarColor("danger");
+        setSnackbarOpen(true);
+        setLoading(false);
+        return; // Stop further processing
+      }
       const validationError = validateTeacherAssignments();
       if (validationError) {
         setSnackbarMessage(validationError);

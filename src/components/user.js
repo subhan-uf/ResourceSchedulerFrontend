@@ -218,6 +218,7 @@ console.log(advisors)
         advisor.year,
         advisor.faculty,
         advisor.seniority,
+        advisor.id
         
       ]))}
       onEdit={(row) => handleEdit(row)}
@@ -285,8 +286,7 @@ console.log(advisors)
           {/* Only require password on creation; on update leave it optional */}
           <TextField
             id="password"
-            label="Password"
-            variant="outlined"
+            label={editingAdvisorId ? "Set New Password" : "Password"}            variant="outlined"
             type="password"
             fullWidth
             required

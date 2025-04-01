@@ -287,8 +287,12 @@ const [searchCourseQuery, setSearchCourseQuery] = useState("");
   };
 
   const handleTimePreferencesChange = (updatedSections) => {
+    if (updatedSections.length > 1) {
+      updatedSections = [updatedSections[0]];
+    }
     setTimePreferences(updatedSections);
   };
+  
 
   // For editing floor
   const handleFloorChange = (val) => {
@@ -440,8 +444,134 @@ const [searchCourseQuery, setSearchCourseQuery] = useState("");
             showSnackbar("No time preference to update!", "danger");
             return;
           }
-          const data = timePreferences[0].values;
+          for (let i = 0; i < timePreferences.length; i++) {
+          const data = timePreferences[i].values;
           const { course, section, day, startTime, endTime, multimedia, speaker, hard_constraint, labOrTheory } = data;
+          if (labOrTheory.toLowerCase() === "theory") {
+            const courseObj = courses.find(c => c.Course_ID.toString() === course);
+            if (!courseObj) {
+              showSnackbar("Course not found.", "danger");
+              return;
+            }
+            const credit = parseInt(courseObj.Credit_hours, 10);
+            let allowedSlots = 0;
+            if (credit === 2) {
+              allowedSlots = 2;
+            } else if (credit === 3 || credit === 4) {
+              allowedSlots = 3;
+            } else {
+              showSnackbar("Invalid credit hours for course.", "danger");
+              return;
+            }
+        
+            const baseTimes = ["08:30", "09:20", "10:10","11:00" ,"11:30", "12:20", "01:10","02:00", "02:50", "03:40", "04:30"];
+            const startIndex = baseTimes.indexOf(startTime);
+            const endIndex = baseTimes.indexOf(endTime);
+            console.log(startTime)
+            if (startIndex === -1 || endIndex === -1 || endIndex <= startIndex) {
+              showSnackbar("Invalid time selection.", "danger");
+              return;
+            }
+            const newPrefSlots = (endIndex - startIndex === 1) ? 1 : (endIndex - startIndex === 2 ? 2 : 0);
+            if (newPrefSlots === 0) {
+              showSnackbar("Preference must be either one slot or two consecutive slots.", "danger");
+              return;
+            }
+
+              // NEW: Enforce slot-type rules based on credit hours
+  if (credit === 2) {
+    if (newPrefSlots !== 2) {
+      showSnackbar("For 2 credit courses, only consecutive (2-slot) theory preferences are allowed.", "danger");
+      return;
+    }
+  } else if (credit === 3 || credit === 4) {
+    // For 3/4-credit courses, if a theory preference on a different day already exists,
+    // the new entry must be of the opposite type (i.e. if existing is single, new must be consecutive, and vice versa).
+    const existingOther = coursePrefs.filter(cp =>
+      cp.Teacher_ID.toString() === selectedTeacherId.toString() &&
+      cp.Course_ID.toString() === course &&
+      cp.Section.toString() === section &&
+      cp.Lab_or_Theory.toLowerCase() === "theory" &&
+      cp.Day !== day &&
+      ((cp.Preference_ID || cp.CoursePref_ID) !== editingId)
+    );
+    
+    if (existingOther.length === 1) {
+      const ex = existingOther[0];
+      const exStart = baseTimes.indexOf(ex.Start_time.slice(0, 5));
+      const exEnd = baseTimes.indexOf(ex.End_time.slice(0, 5));
+      const existingType = (exEnd - exStart === 1) ? 1 : (exEnd - exStart === 2 ? 2 : 0);
+      if (existingType === newPrefSlots) {
+        showSnackbar("For 3/4 credit courses, if one theory entry is single-slot, the second must be consecutive (or vice versa).", "danger");
+        return;
+      }
+    } else if (existingOther.length > 1) {
+      showSnackbar("Maximum theory preferences for this course and section have been reached.", "danger");
+      return;
+    }
+  }
+
+        
+  const existingSameDay = coursePrefs.filter(cp =>
+    cp.Teacher_ID.toString() === selectedTeacherId.toString() &&
+    cp.Course_ID.toString() === course &&
+    cp.Section.toString() === section &&
+    cp.Lab_or_Theory.toLowerCase() === "theory" &&
+    cp.Day === day &&
+    ((cp.Preference_ID || cp.CoursePref_ID) !== editingId)
+  );
+  
+            if (existingSameDay.length > 0) {
+              for (const ex of existingSameDay) {
+                const exStart = baseTimes.indexOf(ex.Start_time.slice(0, 5));
+                const exEnd = baseTimes.indexOf(ex.End_time.slice(0, 5));
+                const exSlots = (exEnd - exStart === 1) ? 1 : (exEnd - exStart === 2 ? 2 : 0);
+                if (exSlots !== newPrefSlots) {
+                  showSnackbar("Cannot set theory consecutive and single preferences on the same day for the same course and section.", "danger");
+                  return;
+                } else {
+                  showSnackbar("A theory preference for this course and section on that day already exists.", "danger");
+                  return;
+                }
+              }
+            }
+        
+            const existingAll = coursePrefs.filter(cp =>
+              cp.Teacher_ID.toString() === selectedTeacherId.toString() &&
+              cp.Course_ID.toString() === course &&
+              cp.Section.toString() === section &&
+              cp.Lab_or_Theory.toLowerCase() === "theory" &&
+              ((cp.Preference_ID || cp.CoursePref_ID) !== editingId)
+            );
+            
+            let totalSlots = 0;
+            for (const ex of existingAll) {
+              const exStart = baseTimes.indexOf(ex.Start_time.slice(0, 5));
+              const exEnd = baseTimes.indexOf(ex.End_time.slice(0, 5));
+              const exSlots = (exEnd - exStart === 1) ? 1 : (exEnd - exStart === 2 ? 2 : 0);
+              totalSlots += exSlots;
+            }
+            if (totalSlots + newPrefSlots > allowedSlots) {
+              console.log(totalSlots, newPrefSlots, allowedSlots)
+              showSnackbar("Setting this theory preference would exceed allowed slots for this course.", "danger");
+              return;
+            }
+          } else if (labOrTheory.toLowerCase() === "lab") {
+            const existingLab = coursePrefs.find(cp =>
+              cp.Teacher_ID.toString() === selectedTeacherId.toString() &&
+              cp.Course_ID.toString() === course &&
+              cp.Section.toString() === section &&
+              cp.Lab_or_Theory.toLowerCase() === "lab"
+            );
+            if (existingLab) {
+              showSnackbar("A lab preference for this course and section already exists.", "danger");
+              return;
+            }
+          }
+          
+          
+          
+          
           // IMPORTANT: Compare course as string (teacherCourses stores courseID as string)
           const teacherCourseObj = teacherCourses.find((tc) => tc.courseID === course);
           if (!teacherCourseObj) {
@@ -462,8 +592,7 @@ const [searchCourseQuery, setSearchCourseQuery] = useState("");
               const cpId = cp.Preference_ID || cp.CoursePref_ID;
               // Exclude the record being edited
               if (cpId === editingId) return false;
-              return cp.Section.toString() === section.toString() &&
-                     cp.Day === day &&
+              return cp.Teacher_ID.toString() === selectedTeacherId.toString() &&                     cp.Day === day &&
                      (cp.Start_time.slice(0, -3) === startTime || cp.End_time.slice(0, -3) === endTime) &&
                      cp.Hard_constraint === true &&
                      cp.Lab_or_Theory === labOrTheory;
@@ -487,30 +616,165 @@ const [searchCourseQuery, setSearchCourseQuery] = useState("");
             Speaker: !!speaker,
             Hard_constraint: !!hard_constraint,
           };
-          
-          await courseTimePreferenceService.update(editingId, ctpPayload);
+          if (i === 0) {
+            await courseTimePreferenceService.update(editingId, ctpPayload);
+          } else {
+            await courseTimePreferenceService.create(ctpPayload);
+          }
+        }
           showSnackbar("Time/course preference updated!", "success");
           fetchCoursePrefs();
         }
       } else {
         if (preferredFloor.trim() !== "") {
+          // Check if a floor preference already exists for this teacher
+          const existingFloorPref = roomPrefs.find(
+            (rp) =>
+              rp.Teacher_ID.toString() === selectedTeacherId.toString() &&
+              rp.Floor &&
+              rp.Floor.trim() !== ""
+          );
+          if (existingFloorPref) {
+            showSnackbar("Floor Constraint already exists for this teacher.", "danger");
+            return;
+          }
           const rpPayload = {
             Teacher_ID: parseInt(selectedTeacherId, 10),
             Floor: preferredFloor,
           };
           await roomPreferenceService.create(rpPayload);
         }
+        
 for (const sec of timePreferences) {
   // Set default to false in case it's not defined
   const { course, section, day, startTime, endTime, multimedia, speaker, hard_constraint = false, labOrTheory } = sec.values;
   if (!labOrTheory) continue;
-  
+  if (labOrTheory.toLowerCase() === "theory") {
+    // Retrieve course to check credit hours
+    const courseObj = courses.find(c => c.Course_ID.toString() === course);
+    if (!courseObj) {
+      showSnackbar("Course not found.", "danger");
+      return;
+    }
+    const credit = parseInt(courseObj.Credit_hours, 10);
+    let allowedSlots = 0;
+    if (credit === 2) {
+      allowedSlots = 2; // For 2 credit hours: 2 theory slots allowed
+    } else if (credit === 3 || credit === 4) {
+      allowedSlots = 3; // For 3/4 credit hours: 3 theory slots allowed
+    } else {
+      showSnackbar("Invalid credit hours for course.", "danger");
+      return;
+    }
+
+    // Define the standard base times array (must match your existing time options)
+    const baseTimes = ["08:30", "09:20", "10:10","11:00" ,"11:30", "12:20","01:10" ,"02:00", "02:50", "03:40", "04:30"];
+    const startIndex = baseTimes.indexOf(startTime);
+    const endIndex = baseTimes.indexOf(endTime);
+    console.log(endIndex)
+
+    if (startIndex === -1 || endIndex === -1 || endIndex <= startIndex) {
+      showSnackbar("Invalid time selection.", "danger");
+      return;
+    }
+    // Determine how many slots this new preference covers:
+    // If the end time is exactly the next slot after startTime, it is a single slot (1)
+    // If it is two positions later, it is consecutive (2)
+    const newPrefSlots = (endIndex - startIndex === 1) ? 1 : (endIndex - startIndex === 2 ? 2 : 0);
+    if (newPrefSlots === 0) {
+      showSnackbar("Preference must be either one slot or two consecutive slots.", "danger");
+      return;
+    }
+    // NEW (Editing): Enforce slot-type rules for theory preferences based on credit hours
+    if (credit === 2) {
+      if (newPrefSlots !== 2) {
+        showSnackbar("For 2 credit courses, only consecutive (2-slot) theory preferences are allowed.", "danger");
+        return;
+      }
+    } else if (credit === 3 || credit === 4) {
+      const existingOther = coursePrefs.filter(cp =>
+        cp.Teacher_ID.toString() === selectedTeacherId.toString() &&
+        cp.Course_ID.toString() === course &&
+        cp.Section.toString() === section &&
+        cp.Lab_or_Theory.toLowerCase() === "theory" &&
+        cp.Day !== day
+      );
+      if (existingOther.length === 1) {
+        const ex = existingOther[0];
+        const exStart = baseTimes.indexOf(ex.Start_time.slice(0, 5));
+        const exEnd = baseTimes.indexOf(ex.End_time.slice(0, 5));
+        const existingType = (exEnd - exStart === 1) ? 1 : (exEnd - exStart === 2 ? 2 : 0);
+        if (existingType === newPrefSlots) {
+          showSnackbar("For 3/4 credit courses, if one theory entry is single-slot, the second must be consecutive (or vice versa).", "danger");
+          return;
+        }
+      } else if (existingOther.length > 1) {
+        showSnackbar("Maximum theory preferences for this course and section have been reached.", "danger");
+        return;
+      }
+    }
+
+    // Check same-day conflict: cannot mix consecutive and single on the same day for the same course & section
+    const existingSameDay = coursePrefs.filter(cp =>
+      cp.Teacher_ID.toString() === selectedTeacherId.toString() &&
+      cp.Course_ID.toString() === course &&
+      cp.Section.toString() === section &&
+      cp.Lab_or_Theory.toLowerCase() === "theory" &&
+      cp.Day === day
+    );
+    if (existingSameDay.length > 0) {
+      for (const ex of existingSameDay) {
+        const exStart = baseTimes.indexOf(ex.Start_time.slice(0, 5));
+        const exEnd = baseTimes.indexOf(ex.End_time.slice(0, 5));
+        const exSlots = (exEnd - exStart === 1) ? 1 : (exEnd - exStart === 2 ? 2 : 0);
+        if (exSlots !== newPrefSlots) {
+          showSnackbar("Cannot set theory consecutive and single preferences on the same day for the same course and section.", "danger");
+          return;
+        } else {
+          showSnackbar("A theory preference for this course and section on that day already exists.", "danger");
+          return;
+        }
+      }
+    }
+
+    // Sum up all theory slots already set for this teacher, course, and section (across any day)
+    const existingAll = coursePrefs.filter(cp =>
+      cp.Teacher_ID.toString() === selectedTeacherId.toString() &&
+      cp.Course_ID.toString() === course &&
+      cp.Section.toString() === section &&
+      cp.Lab_or_Theory.toLowerCase() === "theory"
+    );
+    let totalSlots = 0;
+    for (const ex of existingAll) {
+      const exStart = baseTimes.indexOf(ex.Start_time.slice(0, 5));
+      const exEnd = baseTimes.indexOf(ex.End_time.slice(0, 5));
+      const exSlots = (exEnd - exStart === 1) ? 1 : (exEnd - exStart === 2 ? 2 : 0);
+      totalSlots += exSlots;
+    }
+    if (totalSlots + newPrefSlots > allowedSlots) {
+      showSnackbar("Setting this theory preference would exceed allowed slots for this course.", "danger");
+      return;
+    }
+  } else if (labOrTheory.toLowerCase() === "lab") {
+    // For lab: only one entry allowed per teacher/course/section.
+    const existingLab = coursePrefs.find(cp =>
+      cp.Teacher_ID.toString() === selectedTeacherId.toString() &&
+      cp.Course_ID.toString() === course &&
+      cp.Section.toString() === section &&
+      cp.Lab_or_Theory.toLowerCase() === "lab"
+    );
+    if (existingLab) {
+      showSnackbar("A lab preference for this course and section already exists.", "danger");
+      return;
+    }
+  }
+  // ------------------ End new theory/lab validation ------------------
   // Check for duplicate only if this new entry is a hard constraint
 
     
     const duplicate = coursePrefs.find((cp) =>
-      cp.Section.toString() === section.toString() &&
-      cp.Day === day &&
+      cp.Teacher_ID.toString() === selectedTeacherId.toString() &&
+    cp.Day === day &&
       (cp.Start_time.slice(0, -3) === startTime || cp.End_time.slice(0, -3) === endTime) &&
       cp.Hard_constraint === true &&
       cp.Lab_or_Theory === labOrTheory
@@ -887,14 +1151,15 @@ for (const sec of timePreferences) {
           </FormControl>
 
           <Box sx={{ gridColumn: "span 2", mt: 2 }}>
-            <DynamicForm
-              fields={fieldsTime}
-              sectionTitle="Preference"
-              getSectionTitle={getSectionTitle}
-              addButtonText="Add new preference"
-              onPreferencesChange={handleTimePreferencesChange}
-              initialSections={timePreferences}
-            />
+          <DynamicForm
+  fields={fieldsTime}
+  sectionTitle="Preference"
+  getSectionTitle={getSectionTitle}
+  {...(timePreferences.length === 0 ? { addButtonText: "Add new preference" } : {})}
+  onPreferencesChange={handleTimePreferencesChange}
+  initialSections={timePreferences}
+/>
+
           </Box>
 
           <Box sx={{ gridColumn: "span 2", textAlign: "center", mt: 2 }}>

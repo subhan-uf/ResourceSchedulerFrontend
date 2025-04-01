@@ -366,8 +366,8 @@ const [snackbarColor, setSnackbarColor] = useState('neutral'); // success, dange
           margin: "0 auto",
           padding: 4,
           borderRadius: 2,
-          boxShadow: 4,
-          backgroundColor: "#f5f5f5",
+          // boxShadow: 4,
+          backgroundColor: "transparent",
         }}
       >
         <FormControl fullWidth required>
