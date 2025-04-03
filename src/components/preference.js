@@ -638,12 +638,62 @@ const [searchCourseQuery, setSearchCourseQuery] = useState("");
             showSnackbar("Floor Constraint already exists for this teacher.", "danger");
             return;
           }
+          
+          // NEW: If the teacher is setting a "Ground" floor preference, check the total sections
+          // if (preferredFloor.trim() === "Ground") {
+          //   // Fetch all teacher-course assignments (BCTA)
+          //   const bctaResp = await batchCourseTeacherAssignmentService.getAllAssignments();
+          //   const allBCTAs = bctaResp.data || [];
+            
+          //   // Create a set to hold unique section IDs from teachers who already have a Ground floor preference.
+          //   let sectionsSet = new Set();
+            
+          //   // For each teacher who already has a Ground floor constraint in roomPrefs...
+          //   roomPrefs
+          //     .filter(rp => rp.Floor.trim() === "Ground")
+          //     .forEach(rp => {
+          //       allBCTAs.forEach(assignment => {
+          //         if (assignment.Teacher_ID.toString() === rp.Teacher_ID.toString()) {
+          //           let sectionId = "";
+          //           if (assignment.Section && typeof assignment.Section === "object") {
+          //             sectionId = assignment.Section.Section_ID.toString();
+          //           } else {
+          //             sectionId = assignment.Section.toString();
+          //           }
+          //           sectionsSet.add(sectionId);
+          //         }
+          //       });
+          //     });
+            
+          //   // Also add the current teacher's sections from the assignments
+          //   allBCTAs
+          //     .filter(assignment => assignment.Teacher_ID.toString() === selectedTeacherId.toString())
+          //     .forEach(assignment => {
+          //       let sectionId = "";
+          //       if (assignment.Section && typeof assignment.Section === "object") {
+          //         sectionId = assignment.Section.Section_ID.toString();
+          //       } else {
+          //         sectionId = assignment.Section.toString();
+          //       }
+          //       sectionsSet.add(sectionId);
+          //     });
+            
+          //   // If the total unique sections is greater than 4, reject the new floor constraint.
+          //   if (sectionsSet.size > 4) {
+          //     showSnackbar("No more floor constraints can be added due to constraint overload.", "danger");
+          //     return;
+          //   }
+          // }
+          
+          // Proceed to create the room preference
           const rpPayload = {
             Teacher_ID: parseInt(selectedTeacherId, 10),
             Floor: preferredFloor,
           };
           await roomPreferenceService.create(rpPayload);
         }
+        
+        
         
 for (const sec of timePreferences) {
   // Set default to false in case it's not defined
@@ -1061,7 +1111,7 @@ for (const sec of timePreferences) {
   
   const tabLabels = isEditing 
   ? ["View list of Room Preferences","View list of Class Time Preferences" ,"Editing Preference"] 
-  : ["View list of courses","View list of Class Time Preferences"  ,"Enter new Preference"];
+  : ["View list of Floor Preferences","View list of Class Time Preferences"  ,"Enter new Preference"];
 
   const roomPrefTable = (
     <>
@@ -1150,17 +1200,19 @@ for (const sec of timePreferences) {
             />
           </FormControl>
 
-          <Box sx={{ gridColumn: "span 2", mt: 2 }}>
-          <DynamicForm
-  fields={fieldsTime}
-  sectionTitle="Preference"
-  getSectionTitle={getSectionTitle}
-  {...(timePreferences.length === 0 ? { addButtonText: "Add new preference" } : {})}
-  onPreferencesChange={handleTimePreferencesChange}
-  initialSections={timePreferences}
-/>
+          {editType !== "room" && (
+  <Box sx={{ gridColumn: "span 2", mt: 2 }}>
+    <DynamicForm
+      fields={fieldsTime}
+      sectionTitle="Preference"
+      getSectionTitle={getSectionTitle}
+      {...(timePreferences.length === 0 ? { addButtonText: "Add new preference" } : {})}
+      onPreferencesChange={handleTimePreferencesChange}
+      initialSections={timePreferences}
+    />
+  </Box>
+)}
 
-          </Box>
 
           <Box sx={{ gridColumn: "span 2", textAlign: "center", mt: 2 }}>
             <Button variant="contained" color="primary" type="submit" fullWidth>
@@ -1194,7 +1246,7 @@ for (const sec of timePreferences) {
           sx={{
             position: 'absolute',
             top: 40,
-            right: 16,
+            right: 260,
             zIndex: 1000,
             borderRadius: 2,
             boxShadow: 2,

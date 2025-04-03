@@ -8,9 +8,14 @@ import Typography from "@mui/material/Typography";
 import Divider from "@mui/material/Divider";
 
 export default function Dashboard() {
+  const storedUser = localStorage.getItem("user");
+  const user = storedUser ? JSON.parse(storedUser) : null;
   return (
     <Box sx={{ bgcolor: "grey.100", minHeight: "100vh", py: 8 }}>
       <Container maxWidth="lg">
+      <Typography variant="h4" align="center" fontWeight={600} gutterBottom>
+          {user && user.username ? `Welcome back ${user.username}` : "Welcome back"}
+        </Typography>
         {/* Page Title */}
         {/* <Typography variant="h3" align="center" fontWeight={700} gutterBottom>
           Dashboard

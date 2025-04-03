@@ -320,6 +320,8 @@ const tabLabels = isEditing
           onChange={(e) =>
             setCourseData({ ...courseData, Course_code: e.target.value })
           }
+          inputProps={{ pattern: '^[A-Za-z]{2}-\\d+$' }}
+          helperText="Eg. CT-123"
         />
         <TextField
           label="Course ShortForm"
@@ -331,6 +333,7 @@ const tabLabels = isEditing
           onChange={(e) =>
             setCourseData({ ...courseData, Course_name: e.target.value })
           }
+          helperText="Eg. TAFL"
         />
         <TextField
   label="Course Full Name"
@@ -342,6 +345,7 @@ const tabLabels = isEditing
   onChange={(e) =>
     setCourseData({ ...courseData, Course_fullname: e.target.value })
   }
+  helperText="Eg. Theory of Programming Languages"
 />
 
         <TextField
@@ -481,7 +485,7 @@ const tabLabels = isEditing
           sx={{
             position: 'absolute',
             top: 40,
-            right: 16,
+            right: 260,
             zIndex: 1000,
             borderRadius: 2,
             boxShadow: 2,

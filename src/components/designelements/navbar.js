@@ -30,9 +30,28 @@ function ResponsiveAppBar({ onLogout }) {
   }, []);
 
   const getPageName = () => {
+    // Extract the first segment of the path (ignoring the leading slash)
     const path = location.pathname.split('/')[1];
-    return path ? path.charAt(0).toUpperCase() + path.slice(1) : 'Dashboard';
+    
+    // Define a mapping for each page
+    const pageNames = {
+      teacher: "Teacher Management",
+      room: "Room Management",
+      course: "Course Management",
+      batch: "Batch Management",
+      preference: "Preferences & Constraints",
+      compensatory: "Compensatory Classes",
+      user: "User Management",
+      report: "Reports",
+      generation: "Timetable Generation",
+      availability: "Availability",
+      dashboard: "Dashboard"
+    };
+  
+    // Return the mapped value or a default value if not found
+    return pageNames[path] || "Dashboard";
   };
+  
 
   const handleAvatarClick = e => setAnchorEl(e.currentTarget);
   const handleClose = () => setAnchorEl(null);

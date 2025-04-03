@@ -285,7 +285,7 @@ function Room() {
             <TextField
               label="Room number"
               variant="outlined"
-              type="text"
+              type="number"
               fullWidth
               required
               value={roomData.Room_no}
@@ -409,7 +409,7 @@ function Room() {
           sx={{
             position: 'absolute',
             top: 40,
-            right: 16,
+            right: 260,
             zIndex: 1000,
             borderRadius: 2,
             boxShadow: 2,

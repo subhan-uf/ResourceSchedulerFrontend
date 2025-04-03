@@ -219,6 +219,12 @@ const [snackbarColor, setSnackbarColor] = useState('neutral'); // success, dange
   // -----------------------------
   const handleSubmit = async () => {
     try {
+      if (sections.length === 0) {
+        setSnackbarMessage('At least one section must be added to create a batch.');
+        setSnackbarColor('danger');
+        setSnackbarOpen(true);
+        return;
+      }
       if (isEditing && editingBatchId) {
         // 1) Update the batch itself.
         await BatchService.updateBatch(editingBatchId, batchData);
@@ -316,8 +322,8 @@ const [snackbarColor, setSnackbarColor] = useState('neutral'); // success, dange
   // -----------------------------
   const fields = [
     { componentType: "TextField", label: "Section Name", name: "Section_name", type: "text" },
-    { componentType: "TextField", label: "Max Students", name: "Max_students", type: "number" },
-    { componentType: "TextField", label: "Max Class Gaps per Day", name: "Max_gaps", type: "number" },
+    { componentType: "TextField", label: "Max Students", name: "Max_students", type: "number", required: true },
+    { componentType: "TextField", label: "Max Class Gaps per Day", name: "Max_gaps", type: "number", required:true },
   ];
   
   const getSectionTitle = (index) => ``;
@@ -498,7 +504,7 @@ const [snackbarColor, setSnackbarColor] = useState('neutral'); // success, dange
           sx={{
             position: 'fixed',
             top: 120,
-            right: 200,
+            right: 260,
             zIndex: 1000,
             borderRadius: 2,
             boxShadow: 2,

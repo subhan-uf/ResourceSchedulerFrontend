@@ -1023,7 +1023,7 @@ setBctaAssignments(updatedBCTAs.data);
           sx={{
             position: 'absolute',
             top: 40,
-            right: 16,
+            right: 260,
             zIndex: 1000,
             borderRadius: 2,
             boxShadow: 2,
