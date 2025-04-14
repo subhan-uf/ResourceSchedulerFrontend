@@ -206,6 +206,23 @@ function Course() {
         Is_Lab: !!courseData.Is_Lab,
         Batch_ID: parseInt(courseData.Batch_ID, 10) || null, 
       };
+        // Look for an existing course with the same code & batch
+   const duplicate = courses.find(c =>
+     c.Course_code === payload.Course_code &&
+     c.Batch_ID === payload.Batch_ID &&
+     // when editing, ignore the record we’re updating
+     (!isEditing || c.Course_ID !== editingCourseId)
+   );
+   if (duplicate) {
+     showSnackbar(
+       `Course ${payload.Course_code} already exists for this batch.`,
+       "danger"
+     );
+     return; // stop here—don’t submit
+   }
+
+
+
       console.log(payload)
       if (isEditing && editingCourseId) {
         await CourseService.updateCourse(editingCourseId, payload);

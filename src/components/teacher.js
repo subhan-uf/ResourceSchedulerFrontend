@@ -152,16 +152,17 @@ useEffect(() => {
 }, [labCourses, theoryCourses]);
   
 useEffect(() => {
-  async function fetchBCTAs() {
+  const fetchBCTAs = async () => {
     try {
       const resp = await batchCourseTeacherAssignmentService.getAllAssignments();
       setBctaAssignments(resp.data);
     } catch (error) {
       console.error("Error fetching BCTA assignments:", error);
     }
-  }
-  fetchBCTAs();
-}, []);
+  };
+  // Refresh after deletions
+  if (!isEditing) fetchBCTAs();
+}, [assignmentMappings, isEditing]);
 // When no disciplines are selected, clear batches and assignment mappings.
 useEffect(() => {
   if (selectedDisciplines.length === 0) {
@@ -710,6 +711,7 @@ setBctaAssignments(updatedBCTAs.data);
             required
             value={formData.Teacher_ID}
             onChange={handleInputChange}
+            disabled={isEditing}
           />
           <TextField
             label="Name"
@@ -720,6 +722,7 @@ setBctaAssignments(updatedBCTAs.data);
             required
             value={formData.Name}
             onChange={handleInputChange}
+            disabled={isEditing}
           />
          <TextField
   label="NIC"
@@ -732,6 +735,7 @@ setBctaAssignments(updatedBCTAs.data);
   onChange={handleInputChange}
   inputProps={{ maxLength: 13, pattern: "[0-9]{13}" }}
   helperText="NIC must be exactly 13 digits"
+  disabled={isEditing}
 />
 
           <TextField
@@ -743,6 +747,7 @@ setBctaAssignments(updatedBCTAs.data);
             required
             value={formData.Email}
             onChange={handleInputChange}
+            disabled={isEditing}
           />
           <TextField
   label="Phone"
@@ -985,9 +990,9 @@ setBctaAssignments(updatedBCTAs.data);
           </Box>
           {isEditing && (
   <Box sx={{ gridColumn: "span 2", textAlign: "center", mt: 2 }}>
-    <Button variant="outlined" color="secondary" onClick={resetForm} fullWidth>
+    {/* <Button variant="outlined" color="secondary" onClick={resetForm} fullWidth>
       Stop Updating
-    </Button>
+    </Button> */}
   </Box>
 )}
 

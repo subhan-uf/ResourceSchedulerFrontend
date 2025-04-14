@@ -30,6 +30,9 @@ function ResponsiveAppBar({ onLogout }) {
   }, []);
 
   const getPageName = () => {
+    if (location.pathname === '/') {
+      return "Login";
+    }
     // Extract the first segment of the path (ignoring the leading slash)
     const path = location.pathname.split('/')[1];
     

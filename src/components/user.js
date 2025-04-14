@@ -252,6 +252,7 @@ console.log(advisors)
             required
             value={formData.username}
             onChange={handleInputChange}
+            disabled={editingAdvisorId}
           />
           <TextField
             id="email"
@@ -262,6 +263,29 @@ console.log(advisors)
             required
             value={formData.email}
             onChange={handleInputChange}
+            disabled={editingAdvisorId}
+          />
+                    <TextField
+            id="phone_number"
+            label="Phone"
+            variant="outlined"
+            type="tel"
+            fullWidth
+            required
+            value={formData.phone_number}
+            onChange={handleInputChange}
+            disabled={editingAdvisorId}
+          />
+          <TextField
+            id="staff_id"
+            label="Staff ID"
+            variant="outlined"
+            type="text"
+            fullWidth
+            required
+            value={formData.staff_id}
+            onChange={handleInputChange}
+            disabled={editingAdvisorId}
           />
           <TextField
             id="first_name"
@@ -293,26 +317,7 @@ console.log(advisors)
             value={formData.password}
             onChange={handleInputChange}
           />
-          <TextField
-            id="phone_number"
-            label="Phone"
-            variant="outlined"
-            type="tel"
-            fullWidth
-            required
-            value={formData.phone_number}
-            onChange={handleInputChange}
-          />
-          <TextField
-            id="staff_id"
-            label="Staff ID"
-            variant="outlined"
-            type="text"
-            fullWidth
-            required
-            value={formData.staff_id}
-            onChange={handleInputChange}
-          />
+
           <FormControl fullWidth required>
           <Singledropdown
   label="Year"

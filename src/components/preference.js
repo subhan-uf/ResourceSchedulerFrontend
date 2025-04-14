@@ -128,6 +128,7 @@ const [searchCourseQuery, setSearchCourseQuery] = useState("");
   const fetchCoursePrefs = async () => {
     try {
       const resp = await courseTimePreferenceService.getAll();
+      
       setCoursePrefs(resp.data || []);
     } catch (error) {
       console.error("Error fetching time prefs:", error);
@@ -561,7 +562,8 @@ const [searchCourseQuery, setSearchCourseQuery] = useState("");
               cp.Teacher_ID.toString() === selectedTeacherId.toString() &&
               cp.Course_ID.toString() === course &&
               cp.Section.toString() === section &&
-              cp.Lab_or_Theory.toLowerCase() === "lab"
+              cp.Lab_or_Theory.toLowerCase() === "lab" &&
+              ((cp.Preference_ID || cp.CoursePref_ID) !== editingId)
             );
             if (existingLab) {
               showSnackbar("A lab preference for this course and section already exists.", "danger");
@@ -592,11 +594,13 @@ const [searchCourseQuery, setSearchCourseQuery] = useState("");
               const cpId = cp.Preference_ID || cp.CoursePref_ID;
               // Exclude the record being edited
               if (cpId === editingId) return false;
-              return cp.Teacher_ID.toString() === selectedTeacherId.toString() &&                     cp.Day === day &&
+              return    cp.Section.toString() === section.toString() &&   // Check section as well
+                cp.Day === day &&                    cp.Day === day &&
                      (cp.Start_time.slice(0, -3) === startTime || cp.End_time.slice(0, -3) === endTime) &&
-                     cp.Hard_constraint === true &&
-                     cp.Lab_or_Theory === labOrTheory;
+                     cp.Hard_constraint === true 
+                    //  cp.Lab_or_Theory === labOrTheory;
             });
+            console.log(duplicate)
             if (duplicate) {
               console.log("Duplicate found during edit:", duplicate);
               showSnackbar("Another hard preference is already set at this time.", "danger");
@@ -640,50 +644,50 @@ const [searchCourseQuery, setSearchCourseQuery] = useState("");
           }
           
           // NEW: If the teacher is setting a "Ground" floor preference, check the total sections
-          // if (preferredFloor.trim() === "Ground") {
-          //   // Fetch all teacher-course assignments (BCTA)
-          //   const bctaResp = await batchCourseTeacherAssignmentService.getAllAssignments();
-          //   const allBCTAs = bctaResp.data || [];
+          if (preferredFloor.trim() === "Ground") {
+            // Fetch all teacher-course assignments (BCTA)
+            const bctaResp = await batchCourseTeacherAssignmentService.getAllAssignments();
+            const allBCTAs = bctaResp.data || [];
             
-          //   // Create a set to hold unique section IDs from teachers who already have a Ground floor preference.
-          //   let sectionsSet = new Set();
+            // Create a set to hold unique section IDs from teachers who already have a Ground floor preference.
+            let sectionsSet = new Set();
             
-          //   // For each teacher who already has a Ground floor constraint in roomPrefs...
-          //   roomPrefs
-          //     .filter(rp => rp.Floor.trim() === "Ground")
-          //     .forEach(rp => {
-          //       allBCTAs.forEach(assignment => {
-          //         if (assignment.Teacher_ID.toString() === rp.Teacher_ID.toString()) {
-          //           let sectionId = "";
-          //           if (assignment.Section && typeof assignment.Section === "object") {
-          //             sectionId = assignment.Section.Section_ID.toString();
-          //           } else {
-          //             sectionId = assignment.Section.toString();
-          //           }
-          //           sectionsSet.add(sectionId);
-          //         }
-          //       });
-          //     });
+            // For each teacher who already has a Ground floor constraint in roomPrefs...
+            roomPrefs
+              .filter(rp => rp.Floor.trim() === "Ground")
+              .forEach(rp => {
+                allBCTAs.forEach(assignment => {
+                  if (assignment.Teacher_ID.toString() === rp.Teacher_ID.toString()) {
+                    let sectionId = "";
+                    if (assignment.Section && typeof assignment.Section === "object") {
+                      sectionId = assignment.Section.Section_ID.toString();
+                    } else {
+                      sectionId = assignment.Section.toString();
+                    }
+                    sectionsSet.add(sectionId);
+                  }
+                });
+              });
             
-          //   // Also add the current teacher's sections from the assignments
-          //   allBCTAs
-          //     .filter(assignment => assignment.Teacher_ID.toString() === selectedTeacherId.toString())
-          //     .forEach(assignment => {
-          //       let sectionId = "";
-          //       if (assignment.Section && typeof assignment.Section === "object") {
-          //         sectionId = assignment.Section.Section_ID.toString();
-          //       } else {
-          //         sectionId = assignment.Section.toString();
-          //       }
-          //       sectionsSet.add(sectionId);
-          //     });
+            // Also add the current teacher's sections from the assignments
+            allBCTAs
+              .filter(assignment => assignment.Teacher_ID.toString() === selectedTeacherId.toString())
+              .forEach(assignment => {
+                let sectionId = "";
+                if (assignment.Section && typeof assignment.Section === "object") {
+                  sectionId = assignment.Section.Section_ID.toString();
+                } else {
+                  sectionId = assignment.Section.toString();
+                }
+                sectionsSet.add(sectionId);
+              });
             
-          //   // If the total unique sections is greater than 4, reject the new floor constraint.
-          //   if (sectionsSet.size > 4) {
-          //     showSnackbar("No more floor constraints can be added due to constraint overload.", "danger");
-          //     return;
-          //   }
-          // }
+            // If the total unique sections is greater than 4, reject the new floor constraint.
+            if (sectionsSet.size > 4) {
+              showSnackbar("No more floor constraints can be added due to constraint overload.", "danger");
+              return;
+            }
+          }
           
           // Proceed to create the room preference
           const rpPayload = {
@@ -823,11 +827,10 @@ for (const sec of timePreferences) {
 
     
     const duplicate = coursePrefs.find((cp) =>
-      cp.Teacher_ID.toString() === selectedTeacherId.toString() &&
-    cp.Day === day &&
+      cp.Section.toString() === section.toString() &&    cp.Day === day &&
       (cp.Start_time.slice(0, -3) === startTime || cp.End_time.slice(0, -3) === endTime) &&
-      cp.Hard_constraint === true &&
-      cp.Lab_or_Theory === labOrTheory
+      cp.Hard_constraint === true 
+      // cp.Lab_or_Theory === labOrTheory
     );
 
     

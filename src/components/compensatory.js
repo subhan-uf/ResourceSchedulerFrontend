@@ -66,7 +66,7 @@ const [showViewTimetable, setShowViewTimetable] = useState(false);
 const [allTimetableDetails, setAllTimetableDetails] = useState([]);
 // Add to your existing state declarations:
 const [searchQuery, setSearchQuery] = useState("");
-
+const [anyPublished, setAnyPublished] = useState(false);
 const [currentTab, setCurrentTab] = useState(0);
 useEffect(() => {
     if (!isEditing) {
@@ -79,6 +79,28 @@ useEffect(() => {
       setTeacherCourses([]);
     }
   }, [isEditing]);
+
+
+
+useEffect(() => {
+  async function checkForPublished() {
+    try {
+      const headersResp = await apiClient.get('/timetable-header/');
+      const published = headersResp.data.some(h => h.Status === "published");
+      setAnyPublished(published);
+    } catch (err) {
+      console.error(err);
+    }
+  }
+  checkForPublished();
+}, []);
+  useEffect(() => {
+    // once we know what sections exist, fetch the timetable for the first/default one
+  
+      fetchSectionTimetableDetails();
+    
+  }, []);
+  
   
   useEffect(() => {
 
@@ -820,6 +842,7 @@ const getDayIndex = (day) => {
           const filteredDetails = details.filter(
             detail => headerIDs.includes(detail.Timetable_ID)
           );
+          // console.log(filteredDetails)
           
           // Set the state with the filtered timetable details
           setSectionTimetableDetails(filteredDetails);
@@ -829,8 +852,8 @@ const getDayIndex = (day) => {
       };
       
       
-      
-      const publishedTimetableExists = sectionTimetableDetails && sectionTimetableDetails.length > 0;
+      const publishedTimetableExists = anyPublished;
+      // console.log("SJNDJJDS",sectionTimetableDetails)
       const compensatoryMessage = (
         <Box sx={{ p: 2, textAlign: 'center' }}>
           Please Generate and publish a Timetable in order to book a compensatory class

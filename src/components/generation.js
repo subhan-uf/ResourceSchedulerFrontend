@@ -213,8 +213,17 @@ const [currentAcademicYear, setCurrentAcademicYear] = useState(
           batchId = batchObj.Batch_ID; // for response
           year = batchObj.Year ? currentAcademicYear-batchObj.Year  : 1;
           const sectionsForBatch = sections.filter((s) => String(s.Batch_ID) === String(batchObj.Batch_ID));
-          const matchingSection = sectionsForBatch.find((s) => String(s.Section_ID) === String(tca.Section_ID || s.Section_ID));
-          if (matchingSection) {
+          const sectionIdToFind = tca.Section_ID;
+          const matchingSection = sectionsForBatch.find((s) => 
+            String(s.Section_ID) === String(sectionIdToFind) // No fallback
+          );
+          
+          // Handle missing section explicitly
+          if (!matchingSection) {
+            console.error(`Section ${sectionIdToFind} not found for TCA`);
+            return; // Skip invalid assignment
+          }
+          sectionIndex = sectionsForBatch.indexOf(matchingSection);          if (matchingSection) {
             sectionId = matchingSection.Section_ID;
             sectionIndex = sectionsForBatch.findIndex((s) => String(s.Section_ID) === String(matchingSection.Section_ID));
           } else if (sectionsForBatch.length > 0) {
@@ -1326,25 +1335,42 @@ const detailPayload = {
                 <div>No timetable generated yet</div>
               </Box>
             )}
-            <Box sx={{ display: "flex", justifyContent: "center", gap: 2, mt: 4 }}>
-  <Button
-    variant="contained"
-    color="secondary"
-    onClick={() =>initiateSaveTimetable("draft")}
-    disabled={saveLoading}
-  >
-    Draft Timetable
-  </Button>
-  <Button
-    variant="contained"
-    // color="primary"
-    onClick={() => initiateSaveTimetable("published")}
-    disabled={saveLoading}
-
-  >
-    Publish Timetable
-  </Button>
-</Box>
+{generatedData && (
+  <Box sx={{ display: "flex", justifyContent: "center", gap: 2, mt: 4 }}>
+    <Button
+      variant="solid"
+      color="warning"
+      onClick={() => initiateSaveTimetable("draft")}
+      disabled={saveLoading}
+      size="lg"
+      startDecorator={<i className="fas fa-save"/>}
+      sx={{ 
+        fontWeight: 'bold',
+        textTransform: 'uppercase',
+        boxShadow: 'md',
+        '&:hover': { boxShadow: 'lg' }
+      }}
+    >
+      Save Draft
+    </Button>
+    <Button
+      variant="solid"
+      color="success"
+      onClick={() => initiateSaveTimetable("published")}
+      disabled={saveLoading}
+      size="lg"
+      startDecorator={<i className="fas fa-upload"/>}
+      sx={{ 
+        fontWeight: 'bold',
+        textTransform: 'uppercase',
+        boxShadow: 'md',
+        '&:hover': { boxShadow: 'lg' }
+      }}
+    >
+      Publish Now
+    </Button>
+  </Box>
+)}
 
           </div>,
 

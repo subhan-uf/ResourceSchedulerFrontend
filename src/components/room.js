@@ -192,6 +192,19 @@ function Room() {
       Room_status: roomData.Room_status, // "enable" or "disable"
     };
 
+     const duplicate = rooms.find(r =>
+         String(r.Room_no)   === String(payload.Room_no)   &&  // same number
+         r.Room_type         === payload.Room_type         &&  // same type
+         (!isEditing || r.Room_ID !== editingRoomId)           // ignore self when editing
+       );
+       if (duplicate) {
+         showSnackbar(
+           `${payload.Room_type} room ${payload.Room_no} already exists.`,
+           "danger"
+         );
+         return;  // stop here—don’t call create/update
+       }
+
     try {
       if (isEditing && editingRoomId) {
         // Update
