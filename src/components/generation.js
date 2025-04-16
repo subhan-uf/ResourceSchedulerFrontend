@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import TeacherTabs from "./designelements/tabforall";
-import { Alert, Box, CircularProgress, Typography } from "@mui/material";
+import { Alert, Box, CircularProgress, FormControl, FormControlLabel, Radio, RadioGroup, Typography } from "@mui/material";
 import Button from "@mui/joy/Button";
 import Timetable from "./designelements/timetable";
 
@@ -84,6 +84,7 @@ const [snackbarColor, setSnackbarColor] = useState("neutral"); // neutral, succe
   const [showModal, setShowModal] = useState(false);
   const [saveLoading, setSaveLoading] = useState(false);
   const [roomPrefs, setRoomPrefs] = useState([]);
+  const [dummyOption, setDummyOption] = useState("option1");
 
   // Save the timetable status ("draft" or "published") that triggered the modal
   const [timetableStatus, setTimetableStatus] = useState("");
@@ -1262,6 +1263,30 @@ const detailPayload = {
     }}
   />
 </Box>
+<Box sx={{ display: "flex", justifyContent: "center", mb: 2 }}>
+  <FormControl component="fieldset">
+    <RadioGroup
+      row
+      name="dummyOptions"
+      value={dummyOption}
+      onChange={(e) => setDummyOption(e.target.value)}
+    >
+      <FormControlLabel
+        value="Mon & Tue Lab days for 2nd and 4th Year"
+        control={<Radio />}
+        label="Mon & Tue Lab days for 2nd and 4th Year"
+      />
+      <FormControlLabel
+        value="Mon & Tue Lab days for 1st and 3rd Year"
+        control={<Radio />}
+        label="Mon & Tue Lab days for 1st and 3rd Year"
+      />
+    </RadioGroup>
+  </FormControl>
+</Box>
+
+
+
             <Box sx={{ display: "flex", justifyContent: "center", mt: 2 }}>
               <Button
                 variant="solid"

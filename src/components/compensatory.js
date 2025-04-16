@@ -24,6 +24,7 @@ import AlertDialogModal from "./designelements/modal";
 import CustomSnackbar from "./designelements/alert";
 import ViewCompensatoryTimetable from "./designelements/ViewCompensatoryTimetable";
 import { FormLabel, RadioGroup, FormControlLabel, Radio } from '@mui/material';
+import Dropdown from "./designelements/multipledropdown";
 
 function Compensatory() {
     const [selectedSlots, setSelectedSlots] = useState([]);
@@ -59,7 +60,7 @@ const [snackbarOpen, setSnackbarOpen] = useState(false);
 const [snackbarMessage, setSnackbarMessage] = useState("");
 const [snackbarColor, setSnackbarColor] = useState("neutral"); 
 const viewAvailableSlotsButtonRef = useRef(null);
-const [selectedWeek, setSelectedWeek] = useState("");
+const [selectedWeek, setSelectedWeek] = useState([]);
 const [selectedDay, setSelectedDay] = useState("Monday");
 // In Compensatory component (top-level state declarations)
 const [showViewTimetable, setShowViewTimetable] = useState(false);
@@ -68,6 +69,22 @@ const [allTimetableDetails, setAllTimetableDetails] = useState([]);
 const [searchQuery, setSearchQuery] = useState("");
 const [anyPublished, setAnyPublished] = useState(false);
 const [currentTab, setCurrentTab] = useState(0);
+const [sessionTypeOptions, setSessionTypeOptions] = useState([]);  
+async function fetchSessionTypeOptions(teacherID, courseID, sectionID) {
+  const resp = await batchCourseTeacherAssignmentService.getAllAssignments();
+  // pick only assignments for this teacher/course/section:
+  const ours = resp.data.filter(a =>
+    Number(a.Teacher_ID) === Number(teacherID) &&
+    a.Course_ID            === courseID &&
+    Number(a.Section)      === Number(sectionID)
+  );
+  // pull out unique Course_type values (lowercased)
+  const types = Array.from(new Set(ours.map(a => a.Course_type.toLowerCase())));
+  setSessionTypeOptions(types);
+  // default‐select the first one (if any)
+  if (types.length) setSessionType(types[0]);
+}
+
 useEffect(() => {
     if (!isEditing) {
       setSelectedBatch("");
@@ -272,7 +289,7 @@ useEffect(() => {
     setSelectedSection(Number(data.Section_ID));
     setSelectedCourse(Number(data.Course_ID));
     setDescription(data.Desc);
-    setSelectedWeek(Number(data.Week_number));
+    setSelectedWeek(Number(data.Week_number));    
     setSessionType(data.Lab_or_Theory.toLowerCase());
     setSelectedRoom(Number(data.Room_ID).toString());
     setSelectedDay(data.day);
@@ -286,6 +303,11 @@ useEffect(() => {
 
     // Fetch courses and timetable details
     await fetchTeacherCourses(Number(data.Teacher_ID), Number(data.Section_ID));
+    await fetchSessionTypeOptions(
+      Number(data.Teacher_ID),
+      Number(data.Course_ID),
+      Number(data.Section_ID)
+    );
     await fetchSectionTimetableDetails(Number(data.Section_ID));
 
     // Wait for all state updates to propagate
@@ -673,10 +695,11 @@ const getDayIndex = (day) => {
 
     const handleSubmit = async (event) => {
         event.preventDefault();
-        if (!selectedDay) {
-          showSnackbar("Please select a day by choosing slots","danger")
+        if (selectedWeek.length === 0) {
+          showSnackbar("Please select at least one week","danger");
           return;
         }
+        
         if (roomSlots.length === 0) {
           showSnackbar("Please select at least one time slot","danger")
 
@@ -707,27 +730,29 @@ const getDayIndex = (day) => {
             showSnackbar("Record updated successfully!", "success")
           } else {
             // Create new records
-            const submissions = roomSlots.map(slot => {
-              const dataToSend = {
-                Teacher_ID: selectedTeacher,
-                Course_ID: selectedCourse,
-                Room_ID: selectedRoom,
-                Batch_ID: selectedBatch,
-                day: selectedDay,
-                Week_number: Number(selectedWeek),
-                Start_time: slot.start,
-                End_time: slot.end,
-                Status: "Pending",
-                Desc: description,
-                Section_ID: selectedSection,
-                Lab_or_Theory: sessionType,  // Include the session type in the payload
-
-              };
-              console.log(dataToSend)
-              return CompensatoryService.createCompensatory(dataToSend);
-            });
-            
+            const submissions = [];
+            for (let week of selectedWeek) {
+              for (let slot of roomSlots) {
+                submissions.push(
+                  CompensatoryService.createCompensatory({
+                    Teacher_ID:    selectedTeacher,
+                    Course_ID:     selectedCourse,
+                    Room_ID:       selectedRoom,
+                    Batch_ID:      selectedBatch,
+                    day:           selectedDay,
+                    Week_number:   week,           // use each week here
+                    Start_time:    slot.start,
+                    End_time:      slot.end,
+                    Status:        "Pending",
+                    Desc:          description,
+                    Section_ID:    selectedSection,
+                    Lab_or_Theory: sessionType,
+                  })
+                );
+              }
+            }
             await Promise.all(submissions);
+            
             showSnackbar("Compensatory Class(es) booked successfully!", "success")
           }
       
@@ -916,6 +941,8 @@ const getDayIndex = (day) => {
     setTeacherBatches([]);
     setTeacherSections([]);
     setTeacherCourses([]);
+    setSessionType("");        // clear previously‐loaded choice
+    setSessionTypeOptions([]);
     if (selectedValue) fetchTeacherAssignments(selectedValue);
   }}
   disabled={isEditing}
@@ -942,6 +969,8 @@ const getDayIndex = (day) => {
       setSelectedBatch(selectedValue);
       setSelectedSection("");
       setSelectedCourse("");
+      setSessionType("");        // clear previously‐loaded choice
+      setSessionTypeOptions([]);
       if (selectedValue) {
         const sectionsForBatch = teacherAssignments
           .filter(a => a.Batch_ID === selectedValue)
@@ -978,6 +1007,8 @@ const getDayIndex = (day) => {
     setAvailableRooms([]);
     setSelectedRoom("");
     setRoomSlots([]);
+    setSessionType("");        // clear previously‐loaded choice
+    setSessionTypeOptions([]);
     if (selectedValue) {
       fetchSectionTimetableDetails(selectedValue);
       fetchTeacherCourses(selectedTeacher, selectedValue);
@@ -1001,11 +1032,14 @@ const getDayIndex = (day) => {
     };
   })}
   value={selectedCourse}
-  onChange={(selectedValue) => {
-    handleFieldChange()
+  onChange={async (selectedValue) => {
+    handleFieldChange();
     setSelectedCourse(selectedValue);
-    console.log("Selected Course:", selectedValue);
-  }}
+    setSessionType("");
+setSessionTypeOptions([]);
+  if (selectedValue && selectedTeacher && selectedSection) {
+      await fetchSessionTypeOptions(selectedTeacher, selectedValue, selectedSection);
+    }  }}
   disabled={isEditing}
   required
 />
@@ -1025,36 +1059,52 @@ const getDayIndex = (day) => {
 
 
 <FormControl fullWidth required>
+  {isEditing
+    ? (
+      <Singledropdown
+        label="Week"
+        menuItems={Array.from({length:15},(_,i)=>({
+          label: `Week ${i+1}`,
+          value: i+1
+        }))}
+        value={selectedWeek}           // a single number
+        onChange={(val) => setSelectedWeek(val)}
+        required
+      />
+    ) : (
+      <Dropdown
+        heading="Select Week(s)"
+        menuItems={Array.from({length:15},(_,i)=>({
+          label: `Week ${i+1}`,
+          value: i+1
+        }))}
+        value={selectedWeek}           // an array of numbers
+        onChange={(vals) => setSelectedWeek(vals)}
+        required
+      />
+    )
+  }
+</FormControl>
+
+
+
+<FormControl fullWidth required>
   <Singledropdown
-    label="Select Week"
-    menuItems={Array.from({length: 15}, (_, i) => ({
-      label: `Week ${i+1}`,
-      value: i+1,
+    label="Session Type"
+    menuItems={sessionTypeOptions.map(opt => ({
+      label: opt.charAt(0).toUpperCase() + opt.slice(1),
+      value: opt
     }))}
-    value={selectedWeek}
-    onChange={(selectedValue) => {
-      handleFieldChange()
-      setSelectedWeek(selectedValue)}
-    }
-      required
+    value={sessionType}
+    onChange={(val) => {
+      handleFieldChange();
+      setSessionType(val);
+    }}
+    disabled={isEditing}
+    required
   />
 </FormControl>
 
-
-<FormControl component="fieldset" required>
-  <FormLabel component="legend">Select session type</FormLabel>
-  <RadioGroup
-    row
-    value={sessionType}
-    onChange={(event) => {
-      handleFieldChange();
-      setSessionType(event.target.value.toLowerCase());
-    }}
-  >
-    <FormControlLabel value="lab" control={<Radio />} label="Lab" />
-    <FormControlLabel value="theory" control={<Radio />} label="Theory" />
-  </RadioGroup>
-</FormControl>
 
 
 

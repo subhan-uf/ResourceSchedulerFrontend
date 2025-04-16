@@ -22,6 +22,7 @@ import batchCourseTeacherAssignmentService from "./api/batchCourseTeacherAssignm
 import courseService from "./api/courseService";
 import batchService from "./api/batchService";
 import sectionService from "./api/sectionService";
+import disciplineService from "./api/disciplineService";
 
 function Teacher() {
   // ------------------------------------
@@ -30,6 +31,7 @@ function Teacher() {
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
   const [snackbarColor, setSnackbarColor] = useState("neutral"); // e.g. 'success' or 'danger'
+  const [disciplinesOptions, setDisciplinesOptions] = useState([]);
 
   const showSnackbar = (message, color) => {
     setSnackbarMessage(message);
@@ -123,7 +125,26 @@ const [sections, setSections] = useState([]); // all sections from the API
   //   setSelectedSections([]);
   // }, [selectedDisciplines]);
   // Filter selected batches when filteredBatches changes
-useEffect(() => {
+  const fetchDisciplineOptions = async () => {
+    try {
+      const resp = await disciplineService.getAllDisciplines();
+      // Map each discipline to an object with label and value.
+      const opts = resp.data.map((d) => ({
+        label: d.Name, // assuming "Name" is the discipline's display name
+        value: d.Name, // using Name as identifier; change this if you use an ID field
+      }));
+      setDisciplinesOptions(opts);
+    } catch (error) {
+      console.error("Error fetching discipline options:", error);
+    }
+  };
+  
+  // Call the new function on mount
+  useEffect(() => {
+    fetchDisciplineOptions();
+  }, []);
+
+  useEffect(() => {
   setSelectedBatches(prev => 
     prev.filter(batchId => 
       filteredBatches.some(b => b.value === batchId)
@@ -802,13 +823,7 @@ setBctaAssignments(updatedBCTAs.data);
           <FormControl fullWidth>
   <Dropdown
     heading="Select Disciplines (Multiple)"
-    menuItems={[
-      { label: "Computer Science", value: "Computer Science" },
-      { label: "Artificial Intelligence", value: "Artificial Intelligence" },
-      { label: "Cyber Security", value: "Cyber Security" },
-      { label: "Gaming and Animation", value: "Gaming and Animation" },
-      { label: "Data Science", value: "Data Science" },
-    ]}
+    menuItems={disciplinesOptions}
     value={selectedDisciplines}
     onChange={(newValues) => {
       setSelectedDisciplines(newValues);

@@ -10,6 +10,7 @@ import CourseService from "./api/courseService";
 import BatchService from "./api/batchService";
 import Checkboxx from "./designelements/checkbox";
 import coursePreferenceService from "./api/courseTimePreferenceService";
+import Dropdown from "./designelements/multipledropdown";
 
 function Course() {
   // -----------------------------
@@ -27,12 +28,13 @@ function Course() {
     Course_code: "",
     Course_name: "",
     Course_fullname: "",
-    Batch_ID: "",
-    Discipline: "",             // must store an integer PK
+    Batch_ID: [],       // will now be an array of selected batch IDs
+    Discipline: [],     // will now be an array (e.g. ["Computer Science", "Data Science"])
     Max_classes_per_day: "",
     Credit_hours: "",
     Course_desc: "",
   });
+  
 
   // State for editing
   const [isEditing, setIsEditing] = useState(false);
@@ -143,13 +145,15 @@ function Course() {
         Course_code: foundCourse.Course_code || "",
         Course_name: foundCourse.Course_name || "",
         Course_fullname: foundCourse.Course_fullname || "",
-        Batch_ID: foundCourse.Batch_ID || "",   // store the integer PK
-        Discipline: foundBatch?.Discipline || "",
+        Batch_ID: foundCourse.Batch_ID || "",          // single value for editing
+        Discipline: foundBatch?.Discipline || "",         // single value for editing
         Max_classes_per_day: foundCourse.Max_classes_per_day?.toString() || "",
         Credit_hours: foundCourse.Credit_hours?.toString() || "",
         Course_desc: foundCourse.Course_desc || "",
         Is_Lab: !!foundCourse.Is_Lab,
       });
+      
+      
 
       setIsEditing(true);
       setEditingCourseId(courseId);
@@ -204,8 +208,11 @@ function Course() {
       const payload = {
         ...courseData,
         Is_Lab: !!courseData.Is_Lab,
-        Batch_ID: parseInt(courseData.Batch_ID, 10) || null, 
+        // Assume Batch_ID is now an array; if your backend expects multiple batches,
+        // send it as is. If your backend expects a single value, you might need to change that API.
+       
       };
+      
         // Look for an existing course with the same code & batch
    const duplicate = courses.find(c =>
      c.Course_code === payload.Course_code &&
@@ -224,27 +231,33 @@ function Course() {
 
 
       console.log(payload)
+ 
       if (isEditing && editingCourseId) {
-        await CourseService.updateCourse(editingCourseId, payload);
-      
-        // — Delete obsolete lab‑preferences if course is now theory‑only —
-        if (!payload.Is_Lab) {
-          const allPrefs = await coursePreferenceService.getAll();
-          const labPrefs = allPrefs.data.filter(pref =>
-            String(pref.Course_ID) === String(editingCourseId) &&
-            pref.Lab_or_Theory.toLowerCase() === "lab"
-          );
-          await Promise.all(labPrefs.map(pref =>
-            coursePreferenceService.delete(pref.Preference_ID)
-          ));
+        // In editing mode, expect Batch_ID to be a single value (string)  
+        if (!courseData.Batch_ID) {
+          showSnackbar("No batch selected for editing.", "danger");
+          return;
         }
-      
+        await CourseService.updateCourse(editingCourseId, {
+          ...payload,
+          Batch_ID: parseInt(courseData.Batch_ID, 10),
+        });
         showSnackbar("Course updated successfully!", "success");
-      } 
-      else {
-        await CourseService.createCourse(payload);
-        showSnackbar("Course created successfully!", "success");
+      } else {
+        // Create mode: loop over each selected batch and post a new course.
+        if (courseData.Batch_ID.length > 0) {
+          await Promise.all(
+            courseData.Batch_ID.map((bid) =>
+              CourseService.createCourse({ ...payload, Batch_ID: parseInt(bid, 10) })
+            )
+          );
+          showSnackbar("Courses created successfully!", "success");
+        } else {
+          showSnackbar("Please select at least one batch.", "danger");
+          return;
+        }
       }
+      
       fetchAllCourses();
       resetForm();
     } catch (error) {
@@ -264,16 +277,19 @@ function Course() {
     setCourseData({
       Course_code: "",
       Course_name: "",
-      Batch_ID: "",
+      Course_fullname: "",
+      Batch_ID: [],
+      Discipline: [],
       Max_classes_per_day: "",
       Credit_hours: "",
       Course_desc: "",
+      Is_Lab: false,
     });
     setIsEditing(false);
     setEditingCourseId(null);
     setCurrentTab(0);
   };
-
+  
   // -----------------------------
   // Show Snackbar
   // -----------------------------
@@ -416,52 +432,96 @@ const tabLabels = isEditing
 
 
         </FormControl>
-
         <FormControl fullWidth required>
-  <Singledropdown
-    label="Discipline"
-    menuItems={[
-      { label: "Computer Science", value: "Computer Science" },
-      { label: "Artificial Intelligence", value: "Artificial Intelligence" },
-      { label: "Cyber Security", value: "Cyber Security" },
-      { label: "Gaming and Animation", value: "Gaming and Animation" },
-      { label: "Data Science", value: "Data Science" },
-    ]}
-    value={courseData.Discipline} // Controlled value
-    onChange={(selectedValue) => {
-      // Update discipline and reset batch
-      setCourseData({ ...courseData, Discipline: selectedValue, Batch_ID: "" });
-    }}
-    required
-  />
+  {isEditing ? (
+    <Singledropdown
+      label="Discipline"
+      name="discipline"
+      value={courseData.Discipline}  // string value in edit mode
+      menuItems={[
+        { label: "Computer Science", value: "Computer Science" },
+        { label: "Artificial Intelligence", value: "Artificial Intelligence" },
+        { label: "Cyber Security", value: "Cyber Security" },
+        { label: "Gaming and Animation", value: "Gaming and Animation" },
+        { label: "Data Science", value: "Data Science" },
+      ]}
+      onChange={(newVal) => setCourseData({ ...courseData, Discipline: newVal })}
+      required
+    />
+  ) : (
+    <Dropdown
+      heading="Discipline (Select Multiple)"
+      menuItems={[
+        { label: "Computer Science", value: "Computer Science" },
+        { label: "Artificial Intelligence", value: "Artificial Intelligence" },
+        { label: "Cyber Security", value: "Cyber Security" },
+        { label: "Gaming and Animation", value: "Gaming and Animation" },
+        { label: "Data Science", value: "Data Science" },
+      ]}
+      value={courseData.Discipline}  // array
+      onChange={(selectedValues) => {
+        const filteredBatchIDs = courseData.Batch_ID.filter((bid) => {
+          const batch = batches.find(b => b.Batch_ID === bid);
+          return batch && selectedValues.includes(batch.Discipline);
+        });
+        setCourseData({ ...courseData, Discipline: selectedValues, Batch_ID: filteredBatchIDs });
+      }}
+      required
+    />
+  )}
 </FormControl>
 
-        <FormControl fullWidth required>
-  <Singledropdown
-    label="Batch"
-    menuItems={batches
-      .filter((b) => b.Discipline === courseData.Discipline) // Filter batches by selected discipline
-      .map((b) => ({
-        label: b.Batch_name, // Displayed in the dropdown
-        value: b.Batch_ID,   // Actual value sent to the backend
-      }))}
-    value={courseData.Batch_ID}
-    onChange={(selectedValue) => {
-      // Log for debugging
-      console.log("Selected Batch ID:", selectedValue);
-      // Update state
-      setCourseData({ ...courseData, Batch_ID: selectedValue });
-    }}
-    required
-  />
+
+<FormControl fullWidth required>
+  {isEditing ? (
+    <Singledropdown
+      label="Batch"
+      name="batch"
+      value={courseData.Batch_ID} // string value in edit mode
+      menuItems={batches
+        .filter((b) => b.Discipline === courseData.Discipline)
+        .map((b) => ({
+          label: b.Batch_name,
+          value: b.Batch_ID,
+        }))}
+      onChange={(newVal) => setCourseData({ ...courseData, Batch_ID: newVal })}
+      required
+    />
+  ) : (
+    <Dropdown
+      heading="Batch (Select Multiple)"
+      menuItems={batches
+        .filter((b) => 
+          courseData.Discipline.length > 0 && 
+          courseData.Discipline.includes(b.Discipline)
+        )
+        .map((b) => ({
+          label: b.Batch_name,
+          value: b.Batch_ID,
+        }))}
+      value={courseData.Batch_ID}  // array in create mode
+      onChange={(selectedBatchIDs) => {
+        console.log("Selected Batch IDs:", selectedBatchIDs);
+        setCourseData({ ...courseData, Batch_ID: selectedBatchIDs });
+      }}
+      required
+    />
+  )}
 </FormControl>
+
+
 <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
 <Checkboxx
   label="This is a Lab course"
-  checked={courseData.Credit_hours === '4'}
-  disabled
-  onChange={() => {}}
+  checked={courseData.Is_Lab}
+  onChange={(e) => {
+    // If e.target exists, then use e.target.checked. Otherwise, assume e is the new value.
+    const newValue = e && e.target ? e.target.checked : e;
+    setCourseData({ ...courseData, Is_Lab: newValue });
+  }}
 />
+
+
 
   </Box>
 

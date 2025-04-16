@@ -12,10 +12,13 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import WarningIcon from '@mui/icons-material/Warning';
 import CustomAlert from "./designelements/alert";
 import CustomSnackbar from "./designelements/alert";
+import disciplineService from "./api/disciplineService";
+
 function Batch() {
     const [snackbarOpen, setSnackbarOpen] = useState(false);
 const [snackbarMessage, setSnackbarMessage] = useState('');
 const [snackbarColor, setSnackbarColor] = useState('neutral'); // success, danger, info
+const [disciplinesOptions, setDisciplinesOptions] = useState([]);
 
       
   // -----------------------------
@@ -43,6 +46,26 @@ const [snackbarColor, setSnackbarColor] = useState('neutral'); // success, dange
   // -----------------------------
   // Fetch Batches & Sections
   // -----------------------------
+  const fetchDisciplineOptions = async () => {
+    try {
+      const resp = await disciplineService.getAllDisciplines();
+      // Map each discipline to an object with label and value.
+      const opts = resp.data.map((d) => ({
+        label: d.Name, // assuming "Name" is the discipline's display name
+        value: d.Name, // using Name as identifier; change this if you use an ID field
+      }));
+      setDisciplinesOptions(opts);
+    } catch (error) {
+      console.error("Error fetching discipline options:", error);
+    }
+  };
+  
+  // Call the new function on mount
+  useEffect(() => {
+    fetchDisciplineOptions();
+  }, []);
+
+
   useEffect(() => {
     fetchAllBatches();
     fetchAllSections();
@@ -110,6 +133,13 @@ const [snackbarColor, setSnackbarColor] = useState('neutral'); // success, dange
   // -----------------------------
   // Edit
   // -----------------------------
+  const currentYear = new Date().getFullYear();
+  const startYear   = currentYear - 4;
+  const endYear     = currentYear + 1;
+  const yearOptions = Array.from(
+    { length: endYear - startYear + 1 }, // = 6 entries
+    (_, i) => startYear + i
+  ).map((y) => ({ label: `${y}`, value: `${y}` }));
   const handleStopEditing = () => {
     setIsEditing(false);
     setBatchData({ Discipline: "", Batch_name: "", Year: "" });
@@ -376,34 +406,23 @@ const [snackbarColor, setSnackbarColor] = useState('neutral'); // success, dange
           backgroundColor: "transparent",
         }}
       >
-        <FormControl fullWidth required>
+<FormControl fullWidth required>
   <Singledropdown
     label="Discipline"
-    menuItems={[
-      { label: "Computer Science", value: "Computer Science" },
-      { label: "Artificial intelligence", value: "Artificial Intelligence" },
-      { label: "Cyber Security", value: "Cyber Security" },
-      { label: "Gaming and Animation", value: "Gaming and Animation" },
-      { label: "Data Science", value: "Data Science" },
-    ]}
-    value={batchData.Discipline} // Controlled value
+    menuItems={disciplinesOptions}  // Now populated dynamically from backend
+    value={batchData.Discipline} // Controlled value remains the same
     onChange={(selectedValue) => {
       setBatchData({ Discipline: selectedValue, Year: "", Batch_name: "" });
-      setSections([]); // also clear sections if you want
+      setSections([]); // clear sections if desired
     }}
   />
 </FormControl>
 
+
         <FormControl fullWidth required>
-  <Singledropdown
-    label="Year"
-    menuItems={[
-      { label: "2021", value: "2021" },
-      { label: "2022", value: "2022" },
-      { label: "2023", value: "2023" },
-      { label: "2024", value: "2024" },
-      { label: "2025", value: "2025" },
-    ]}
+         <Singledropdown
+   label="Year"
+   menuItems={yearOptions} 
     value={batchData.Year} // Controlled value
     onChange={(selectedValue) => {
       const discipline = batchData.Discipline;

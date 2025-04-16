@@ -350,20 +350,21 @@ function Room() {
 
             {/* Multimedia & Speaker as checkboxes */}
             <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-  <Checkboxx
-    label="Multimedia"
-    checked={roomData.Multimedia === "Available"} // Match the current state
-    onChange={(checked) =>
-      setRoomData({ ...roomData, Multimedia: checked ? "Available" : "Not Available" })
-    }
-  />
-  <Checkboxx
-    label="Speaker"
-    checked={roomData.Speaker === "Available"} // Match the current state
-    onChange={(checked) =>
-      setRoomData({ ...roomData, Speaker: checked ? "Available" : "Not Available" })
-    }
-  />
+            <Checkboxx
+  label="Multimedia"
+  checked={!!roomData.Multimedia}  // Convert to boolean if necessary
+  onChange={(checked) =>
+    setRoomData({ ...roomData, Multimedia: Boolean(checked) })
+  }
+/>
+<Checkboxx
+  label="Speaker"
+  checked={!!roomData.Speaker}
+  onChange={(checked) =>
+    setRoomData({ ...roomData, Speaker: Boolean(checked) })
+  }
+/>
+
 </Box>
 
 

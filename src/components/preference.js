@@ -87,12 +87,62 @@ const [searchCourseQuery, setSearchCourseQuery] = useState("");
   // allTeacherSectionOptions: union of all section options
   const [allTeacherSectionOptions, setAllTeacherSectionOptions] = useState([]);
   const [availableSections, setAvailableSections] = useState([]);
+  const [classTypeOptions, setClassTypeOptions] = useState([]);
 
   // EDIT mode
   const [isEditing, setIsEditing] = useState(false);
   const [editType, setEditType] = useState(null); // "room" or "course"
   const [editingId, setEditingId] = useState(null);
-
+  useEffect(() => {
+    async function fetchClassTypeOptions() {
+      if (timePreferences.length > 0) {
+        const selectedCourse = timePreferences[0].values.course;
+        const selectedSection = timePreferences[0].values.section;
+        if (selectedCourse && selectedSection && selectedTeacherId) {
+          try {
+            const resp = await batchCourseTeacherAssignmentService.getAllAssignments();
+            // Filter assignments for this teacher
+            const teacherRecords = resp.data.filter(
+              (r) => r.Teacher_ID.toString() === selectedTeacherId.toString()
+            );
+            // Filter for the selected course and section (handle object or raw Section)
+            const relevant = teacherRecords.filter((r) => {
+              if (r.Section && typeof r.Section === "object") {
+                return (
+                  r.Course_ID.toString() === selectedCourse &&
+                  r.Section.Section_ID.toString() === selectedSection
+                );
+              } else {
+                return (
+                  r.Course_ID.toString() === selectedCourse &&
+                  r.Section.toString() === selectedSection
+                );
+              }
+            });
+            // Determine unique types (using Course_type property)
+            const types = Array.from(
+              new Set(
+                relevant.map((r) => (r.Course_type || "").trim().toLowerCase())
+              )
+            ).filter((x) => x);
+            // Map the types to dropdown options; capitalize the label
+            const opts = types; // types is an array of strings (e.g. ["lab", "theory"])
+            setClassTypeOptions(opts);
+            
+          } catch (e) {
+            console.error("Error fetching class type options", e);
+            setClassTypeOptions([]);
+          }
+        } else {
+          setClassTypeOptions([]);
+        }
+      } else {
+        setClassTypeOptions([]);
+      }
+    }
+    fetchClassTypeOptions();
+  }, [timePreferences, selectedTeacherId]);
+  
   // ON MOUNT
   useEffect(() => {
     fetchRoomPrefs();
@@ -979,9 +1029,21 @@ for (const sec of timePreferences) {
       options: teacherCourses.map((tc) => tc.courseID),
       getOptionLabel: (cid) => {
         const obj = teacherCourses.find((tc) => tc.courseID === cid);
-        return obj ? obj.courseName : `Course ${cid}`;
+        if (!obj) return `Course ${cid}`;
+        // Get the sections associated with this course (if any)
+        const sections = teacherSectionsByCourse[cid] || [];
+        // Extract unique batch codes (first 4 characters) from the section options.
+        const batchCodes = Array.from(new Set(
+          sections.map(opt => {
+            // The label is expected in the format "BatchName - SectionName"
+            const batchName = opt.label.split(' - ')[0] || '';
+            return batchName.slice(0, 4);
+          })
+        ));
+        return `${obj.courseName} (${batchCodes.join(",")})`;
       },
     },
+    
     {
       componentType: "SingleDropdown",
       label: "Section",
@@ -1011,15 +1073,20 @@ for (const sec of timePreferences) {
       },
     },
     {
-      componentType: "RadioGroup",
-      label: "Class Type (Lab or Theory)",
+      componentType: "SingleDropdown",
+      label: "Class Type",
       name: "labOrTheory",
       required: true,
-      options: [
-        { label: "Lab", value: "lab" },
-        { label: "Theory", value: "theory" },
-      ],
+      // Now use the array of strings (e.g. ["lab", "theory"])
+      options: classTypeOptions,
+      // When displaying an option, capitalize it.
+      getOptionLabel: (value) => value ? value.charAt(0).toUpperCase() + value.slice(1) : "",
+      // The value is a string.
+      getOptionValue: (value) => value,
     },
+    
+    
+    
     {
       componentType: "SingleDropdown",
       label: "Day",

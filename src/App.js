@@ -17,6 +17,7 @@ import './index.css';
 
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import ProtectedRoute from './components/protectedroute';
+import DisciplineAndLabSettingsPage from './components/disciplines';
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -52,6 +53,7 @@ function App() {
         <Route path='/room' element={<ProtectedRoute><Room/></ProtectedRoute>}/>
         <Route path='/Teacher' element={<ProtectedRoute><Teacher/></ProtectedRoute>}/>
         <Route path='/user' element={<ProtectedRoute><User/></ProtectedRoute>}/>
+        <Route path='/disciplines' element={<ProtectedRoute><DisciplineAndLabSettingsPage/></ProtectedRoute>}/>
       </Routes>
     </div>
     </Router>
