@@ -8,10 +8,19 @@ import { Box, Button, FormControl } from "@mui/material";
 import { getAdvisors, createAdvisor, updateAdvisor, deleteAdvisor } from "./api/advisorService";
 import CustomSnackbar from "./designelements/alert";
 import AlertDialogModal from "./designelements/modal";
+import disciplineService from "./api/disciplineService";
 
 function Teacher() {
   // State for advisors list and form fields
   const [advisors, setAdvisors] = useState([]);
+  const [disciplines, setDisciplines] = useState([]);
+
+useEffect(() => {
+  disciplineService.getAllDisciplines()
+    .then(resp => setDisciplines(resp.data))
+    .catch(err => console.error("Error loading disciplines:", err));
+}, []);
+
   const [formData, setFormData] = useState({
     username: "",
     email: "",
@@ -335,18 +344,18 @@ console.log(advisors)
 
           </FormControl>
           <FormControl fullWidth required>
-          <Singledropdown
-  label="Faculty"
-  menuItems={[
-    { label: 'BCIT', value: 'BCIT' },
-  ]}
-  full
-  required
-  value={formData.faculty}
-  onChange={(selectedValue) => setFormData(prev => ({ ...prev, faculty: selectedValue }))}
-/>
-
-          </FormControl>
+  <Singledropdown
+    label="Discipline"
+    menuItems={disciplines.map(d => ({
+      label: d.Name,
+      value: d.Name
+    }))}
+    value={formData.faculty}
+    onChange={selectedValue =>
+      setFormData(prev => ({ ...prev, faculty: selectedValue }))
+    }
+  />
+</FormControl>
           <FormControl fullWidth required>
           <Singledropdown
   label="Seniority"

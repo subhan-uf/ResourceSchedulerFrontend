@@ -638,7 +638,33 @@ const [searchCourseQuery, setSearchCourseQuery] = useState("");
             showSnackbar("Error: This teacher cannot teach theory for this course!", "danger");
             return;
           }
-          
+              // ── HARDCODED OVERLAP PREVENTION ──
+  // (must come before your `duplicate` check)
+  if (hard_constraint) {
+    const bad = coursePrefs.find(cp => cp.Hard_constraint === true && (
+      // existing hard 8:30–10:10 blocks 9:20–11:00
+      (cp.Start_time.slice(0,5) === "08:30" && cp.End_time.slice(0,5) === "10:10"
+        && startTime === "09:20" && endTime === "11:00")
+      // existing hard 9:20–11:00 blocks 8:30–10:10
+      || (cp.Start_time.slice(0,5) === "09:20" && cp.End_time.slice(0,5) === "11:00"
+        && startTime === "08:30" && endTime === "10:10")
+      // existing hard 2:00–3:40 blocks 2:50–4:30
+      || (cp.Start_time.slice(0,5) === "02:00" && cp.End_time.slice(0,5) === "03:40"
+        && startTime === "02:50" && endTime === "04:30")
+      // existing hard 2:50–4:30 blocks 2:00–3:40
+      || (cp.Start_time.slice(0,5) === "02:50" && cp.End_time.slice(0,5) === "04:30"
+        && startTime === "02:00" && endTime === "03:40")
+    ));
+    if (bad) {
+      showSnackbar(
+        "Another hard preference overlaps with your selected time.",
+        "danger"
+      );
+      return;
+    }
+  }
+  // ─────────────────────────────────────
+
             const duplicate = coursePrefs.find((cp) => {
               // Get the record's unique id (could be Preference_ID or CoursePref_ID)
               const cpId = cp.Preference_ID || cp.CoursePref_ID;
@@ -695,46 +721,35 @@ const [searchCourseQuery, setSearchCourseQuery] = useState("");
           
           // NEW: If the teacher is setting a "Ground" floor preference, check the total sections
           if (preferredFloor.trim() === "Ground") {
-            // Fetch all teacher-course assignments (BCTA)
+            // 1) get all teacher‑course assignments
             const bctaResp = await batchCourseTeacherAssignmentService.getAllAssignments();
             const allBCTAs = bctaResp.data || [];
-            
-            // Create a set to hold unique section IDs from teachers who already have a Ground floor preference.
-            let sectionsSet = new Set();
-            
-            // For each teacher who already has a Ground floor constraint in roomPrefs...
-            roomPrefs
-              .filter(rp => rp.Floor.trim() === "Ground")
-              .forEach(rp => {
-                allBCTAs.forEach(assignment => {
-                  if (assignment.Teacher_ID.toString() === rp.Teacher_ID.toString()) {
-                    let sectionId = "";
-                    if (assignment.Section && typeof assignment.Section === "object") {
-                      sectionId = assignment.Section.Section_ID.toString();
-                    } else {
-                      sectionId = assignment.Section.toString();
-                    }
-                    sectionsSet.add(sectionId);
-                  }
-                });
-              });
-            
-            // Also add the current teacher's sections from the assignments
-            allBCTAs
-              .filter(assignment => assignment.Teacher_ID.toString() === selectedTeacherId.toString())
-              .forEach(assignment => {
-                let sectionId = "";
-                if (assignment.Section && typeof assignment.Section === "object") {
-                  sectionId = assignment.Section.Section_ID.toString();
-                } else {
-                  sectionId = assignment.Section.toString();
-                }
+          
+            // 2) collect teacher IDs who will end up with a Ground‑floor pref
+            const teachersWithGround = new Set(
+              roomPrefs
+                .filter(rp => rp.Floor.trim() === "Ground")
+                .map(rp => rp.Teacher_ID.toString())
+            );
+            teachersWithGround.add(selectedTeacherId.toString());
+          
+            // 3) walk all assignments once, collect unique section IDs
+            const sectionsSet = new Set();
+            allBCTAs.forEach(assignment => {
+              const tid = assignment.Teacher_ID.toString();
+              if (teachersWithGround.has(tid)) {
+                const sec = assignment.Section;
+                const sectionId = (typeof sec === "object" ? sec.Section_ID : sec).toString();
                 sectionsSet.add(sectionId);
-              });
-            
-            // If the total unique sections is greater than 4, reject the new floor constraint.
+              }
+            });
+          
+            // 4) enforce max‑4‑sections rule
             if (sectionsSet.size > 4) {
-              showSnackbar("No more floor constraints can be added due to constraint overload.", "danger");
+              showSnackbar(
+                "No more floor constraints can be added due to constraint overload.",
+                "danger"
+              );
               return;
             }
           }
@@ -875,7 +890,33 @@ for (const sec of timePreferences) {
   // ------------------ End new theory/lab validation ------------------
   // Check for duplicate only if this new entry is a hard constraint
 
-    
+      // ── HARDCODED OVERLAP PREVENTION ──
+  // (must come before your `duplicate` check)
+  if (hard_constraint) {
+    const bad = coursePrefs.find(cp => cp.Hard_constraint === true && (
+      // existing hard 8:30–10:10 blocks 9:20–11:00
+      (cp.Start_time.slice(0,5) === "08:30" && cp.End_time.slice(0,5) === "10:10"
+        && startTime === "09:20" && endTime === "11:00")
+      // existing hard 9:20–11:00 blocks 8:30–10:10
+      || (cp.Start_time.slice(0,5) === "09:20" && cp.End_time.slice(0,5) === "11:00"
+        && startTime === "08:30" && endTime === "10:10")
+      // existing hard 2:00–3:40 blocks 2:50–4:30
+      || (cp.Start_time.slice(0,5) === "02:00" && cp.End_time.slice(0,5) === "03:40"
+        && startTime === "02:50" && endTime === "04:30")
+      // existing hard 2:50–4:30 blocks 2:00–3:40
+      || (cp.Start_time.slice(0,5) === "02:50" && cp.End_time.slice(0,5) === "04:30"
+        && startTime === "02:00" && endTime === "03:40")
+    ));
+    if (bad) {
+      showSnackbar(
+        "Another hard preference overlaps with your selected time.",
+        "danger"
+      );
+      return;
+    }
+  }
+  // ─────────────────────────────────────
+
     const duplicate = coursePrefs.find((cp) =>
       cp.Section.toString() === section.toString() &&    cp.Day === day &&
       (cp.Start_time.slice(0, -3) === startTime || cp.End_time.slice(0, -3) === endTime) &&

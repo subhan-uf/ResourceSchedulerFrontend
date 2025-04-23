@@ -90,7 +90,13 @@ function DisciplineAndLabSettingsPage() {
       showSnackbar("Failed to fetch disciplines.", "danger");
     }
   };
-
+  const DEFAULT_DISCIPLINES = [
+    "Computer Science",
+    "Gaming and Animation",
+    "Cyber Security",
+    "Artificial Intelligence",
+    "Data Science"
+  ];
   // -----------------------------
   // SNACKBAR HELPER
   // -----------------------------
@@ -202,10 +208,14 @@ function DisciplineAndLabSettingsPage() {
   };
 
   // (Optional) In case you want to use a confirmation modal for deletion:
-  const handleDeleteClick = (id) => {
-    setDisciplineIdToDelete(id);
-    setDeleteModalOpen(true);
-  };
+    const handleDeleteClick = (id) => {
+        if (DEFAULT_DISCIPLINES.includes(id)) {
+          showSnackbar("Default disciplines cannot be deleted.", "danger");
+          return;
+        }
+        setDisciplineIdToDelete(id);
+        setDeleteModalOpen(true);
+      };
 
   const handleDeleteConfirm = async () => {
     if (!disciplineIdToDelete) return;

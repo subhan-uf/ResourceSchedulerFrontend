@@ -85,6 +85,7 @@ const [snackbarColor, setSnackbarColor] = useState("neutral"); // neutral, succe
   const [saveLoading, setSaveLoading] = useState(false);
   const [roomPrefs, setRoomPrefs] = useState([]);
   const [dummyOption, setDummyOption] = useState("option1");
+  const [generationOption, setGenerationOption] = useState(1);
 
   // Save the timetable status ("draft" or "published") that triggered the modal
   const [timetableStatus, setTimetableStatus] = useState("");
@@ -708,7 +709,11 @@ if (targetDetail && targetDetail.Course_ID) {
         setLoading(false);
         return; // Stop generation if validation fails.
       }
-      const payload = mapDataForAlgorithm();
+      const payload = {
+        ...mapDataForAlgorithm(),
+        generationOption   // ← add this
+      };
+      
       console.log("Final Payload:", {
         ...payload,
         locked_slots: mapLockedSlots() // Add explicit logging
@@ -1264,25 +1269,26 @@ const detailPayload = {
   />
 </Box>
 <Box sx={{ display: "flex", justifyContent: "center", mb: 2 }}>
-  <FormControl component="fieldset">
-    <RadioGroup
-      row
-      name="dummyOptions"
-      value={dummyOption}
-      onChange={(e) => setDummyOption(e.target.value)}
-    >
-      <FormControlLabel
-        value="Mon & Tue Lab days for 2nd and 4th Year"
-        control={<Radio />}
-        label="Mon & Tue Lab days for 2nd and 4th Year"
-      />
-      <FormControlLabel
-        value="Mon & Tue Lab days for 1st and 3rd Year"
-        control={<Radio />}
-        label="Mon & Tue Lab days for 1st and 3rd Year"
-      />
-    </RadioGroup>
-  </FormControl>
+<FormControl component="fieldset">
+  <RadioGroup
+    row
+    name="generationOption"
+    value={String(generationOption)}
+    onChange={e => setGenerationOption(Number(e.target.value))}
+  >
+    <FormControlLabel
+      value="1"
+      control={<Radio />}
+      label="Mon & Wed Lab days for 2nd and 4th Year"
+    />
+    <FormControlLabel
+      value="2"
+      control={<Radio />}
+      label="Mon & Wed Lab days for 1st and 3rd Year"
+    />
+  </RadioGroup>
+</FormControl>
+
 </Box>
 
 

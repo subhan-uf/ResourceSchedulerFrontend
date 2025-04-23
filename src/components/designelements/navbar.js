@@ -182,6 +182,18 @@ function ResponsiveAppBar({ onLogout }) {
               anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
               transformOrigin={{ horizontal: 'right', vertical: 'top' }}
             >
+                <MenuItem
+    onClick={() => {
+      navigate('/disciplines');
+      handleClose();
+    }}
+  >
+    {/* you can add an icon if you like:
+      <ListItemIcon><SchoolIcon fontSize="small" /></ListItemIcon>
+    */}
+    Manage Disciplines
+  </MenuItem>
+  <Divider />
               <MenuItem onClick={goToDashboard}>
                 <ListItemIcon><HomeIcon fontSize="small" /></ListItemIcon>Dashboard
               </MenuItem>

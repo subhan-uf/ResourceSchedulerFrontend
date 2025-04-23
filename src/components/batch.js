@@ -185,7 +185,7 @@ const [disciplinesOptions, setDisciplinesOptions] = useState([]);
         values: {
           Section_name: sec.Section_name || "", // Pre-fill Section_name
           Max_students: sec.Max_students || "", // Pre-fill Max_students
-          Max_gaps: sec.Max_gaps || "", // Pre-fill Max_gaps
+          // Pre-fill Max_gaps
         },
       }));
       
@@ -272,6 +272,7 @@ const [disciplinesOptions, setDisciplinesOptions] = useState([]);
           const sectionData = {
             ...sec.values,
             Batch_ID: editingBatchId,
+            Max_gaps: 1,
           };
       
           if (sec.id && oldSectionIds.includes(sec.id)) {
@@ -311,6 +312,7 @@ const [disciplinesOptions, setDisciplinesOptions] = useState([]);
           const sectionData = {
             ...sec.values,
             Batch_ID: newBatchId,
+            Max_gaps: 1,
           };
           await SectionService.createSection(sectionData);
         }
@@ -353,7 +355,6 @@ const [disciplinesOptions, setDisciplinesOptions] = useState([]);
   const fields = [
     { componentType: "TextField", label: "Section Name", name: "Section_name", type: "text" },
     { componentType: "TextField", label: "Max Students", name: "Max_students", type: "number", required: true },
-    { componentType: "TextField", label: "Max Class Gaps per Day", name: "Max_gaps", type: "number", required:true },
   ];
   
   const getSectionTitle = (index) => ``;

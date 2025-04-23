@@ -733,6 +733,23 @@ const getDayIndex = (day) => {
             const submissions = [];
             for (let week of selectedWeek) {
               for (let slot of roomSlots) {
+                     // ── OVERLAP CHECK ──
+     const overlap = compRecords.find(r =>
+       String(r.Room_ID) === String(selectedRoom) &&
+       r.Lab_or_Theory.toLowerCase() === sessionType.toLowerCase() &&
+       r.Start_time.slice(0,5) === slot.start &&
+       r.End_time.slice(0,5) === slot.end &&
+       Number(r.Week_number) === Number(week)
+     );
+     if (overlap) {
+       const courseName = courseLookup[overlap.Course_ID]?.Course_name || overlap.Course_ID;
+       showSnackbar(
+         `There is an overlap in booking since there is a ${courseName} slot booked in Week ${overlap.Week_number} from ${overlap.Start_time.slice(0,5)} to ${overlap.End_time.slice(0,5)}`,
+         "danger"
+       );
+       return;
+     }
+     // ─────────────────────
                 submissions.push(
                   CompensatoryService.createCompensatory({
                     Teacher_ID:    selectedTeacher,

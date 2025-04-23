@@ -103,7 +103,10 @@ const [sections, setSections] = useState([]); // all sections from the API
   const [isEditing, setIsEditing] = useState(false);
   const [editingTeacherId, setEditingTeacherId] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
-
+  const storedUser = localStorage.getItem('user');
+  const user = storedUser ? JSON.parse(storedUser) : null;
+  const role = user?.role; // "Advisor" or "DEO"
+  
   // ------------------------------------
   // LOAD TEACHERS, BATCHES, COURSES
   // ------------------------------------
@@ -515,6 +518,13 @@ const getAvailableCoursesForMapping = (sectionId, courseType, currentIndex) => {
     setDeleteModalOpen(false);
     setTeacherIdToDelete(null);
   };
+  // e.g. right below your `const [disciplinesOptions…]`:
+const healthOptions = [
+ 
+  { label: "Walking",     value: "Walking"     },
+  { label: "Old Age",    value: "Old Age"    },
+  
+];
 
   // ------------------------------------
   // FORM: handle changes
@@ -678,10 +688,9 @@ setBctaAssignments(updatedBCTAs.data);
   // ------------------------------------
   // TABS
   // ------------------------------------
-  const tabLabels = [
-    "View list of teachers",
-    isEditing ? "Editing teacher" : "Enter new teacher"
-  ];
+   const tabLabels = role === 'Advisor'
+     ? ["View list of teachers"]
+     : ["View list of teachers", isEditing ? "Editing teacher" : "Enter new teacher"];
   
 
   // Tab 1 => teacher list
@@ -784,23 +793,26 @@ setBctaAssignments(updatedBCTAs.data);
 />
 
           <TextField
-            label="Max Classes"
+            label="Max Classes per Day"
             variant="outlined"
             type="number"
             name="Max_classes"
             fullWidth
-            required
+            
             value={formData.Max_classes}
             onChange={handleInputChange}
           />
-          <TextField
+ <Singledropdown
             label="Health Limitation"
-            variant="outlined"
-            type="text"
-            name="Health_limitation"
-            fullWidth
             value={formData.Health_limitation}
-            onChange={handleInputChange}
+            onChange={(newVal) =>
+              setFormData(prev => ({
+                ...prev,
+                Health_limitation: newVal
+              }))
+            }
+            menuItems={healthOptions}
+            fullWidth
           />
 
           {/* Seniority */}
