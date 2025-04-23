@@ -11,6 +11,10 @@ export default function Tables({
   onEdit = () => {},
   onDelete = () => {},
 }) {
+   const storedUser = localStorage.getItem('user');
+ const user       = storedUser ? JSON.parse(storedUser) : null;
+ const role       = user?.role;
+ const isAdvisor  = role === 'Advisor';
   return (
     <Box sx={{ width: "100%" }}>
       <Sheet
@@ -26,7 +30,9 @@ export default function Tables({
           background: `linear-gradient(to right, ${theme.vars.palette.background.surface} 30%, rgba(255, 255, 255, 0)),
             linear-gradient(to right, rgba(255, 255, 255, 0), ${theme.vars.palette.background.surface} 70%) 0 100%,
             radial-gradient(farthest-side at 0 50%, rgba(0,0,0,0.12), rgba(0,0,0,0)),
-            radial-gradient(farthest-side at 100% 50%, rgba(0,0,0,0.12), rgba(0,0,0,0)) 0 100%`,
+     ${!isAdvisor ? `,
+     radial-gradient(farthest-side at 100% 50%, rgba(0,0,0,0.12), rgba(0,0,0,0)) 0 100%` : ''}
+   `,
           backgroundSize:
             "40px calc(100% - var(--TableCell-height)), 40px calc(100% - var(--TableCell-height)), 14px calc(100% - var(--TableCell-height)), 14px calc(100% - var(--TableCell-height))",
           backgroundRepeat: "no-repeat",
@@ -48,8 +54,8 @@ export default function Tables({
               bgcolor: "background.surface",
             },
             "& tr > *:last-child": {
-              position: "sticky",
-              right: 0,
+                position: isAdvisor ? "static" : "sticky",
+                right:    isAdvisor ? "auto"   : 0,
               bgcolor: "var(--TableCell-headBackground)",
             },
           }}
@@ -78,24 +84,12 @@ export default function Tables({
         <td key={cellIndex}>{row[cellIndex] || ''}</td>
       ))}
       <td>
-        <Box sx={{ display: "flex", gap: 1 }}>
-          <Button
-            size="sm"
-            variant="plain"
-            color="neutral"
-            onClick={() => onEdit(row)}
-          >
-            Edit
-          </Button>
-          <Button
-            size="sm"
-            variant="soft"
-            color="danger"
-            onClick={() => onDelete(row)}
-          >
-            Delete
-          </Button>
-        </Box>
+         { !isAdvisor && (
+     <Box sx={{ display: "flex", gap: 1 }}>
+       <Button size="sm" variant="plain" color="neutral" onClick={() => onEdit(row)}>Edit</Button>
+       <Button size="sm" variant="soft" color="danger" onClick={() => onDelete(row)}>Delete</Button>
+     </Box>
+   )}
       </td>
     </tr>
   ))}

@@ -42,7 +42,10 @@ const [disciplinesOptions, setDisciplinesOptions] = useState([]);
   // For the delete modal
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [batchIdToDelete, setBatchIdToDelete] = useState(null);
-
+  const storedUser = localStorage.getItem('user');
+  const user = storedUser ? JSON.parse(storedUser) : null;
+  const role = user?.role; // "Advisor" or "DEO"
+  
   // -----------------------------
   // Fetch Batches & Sections
   // -----------------------------
@@ -363,9 +366,12 @@ const [disciplinesOptions, setDisciplinesOptions] = useState([]);
   // -----------------------------
   // Tabs
   // -----------------------------
-  const tabLabels = isEditing 
-  ? ["View list of batches", "Editing Batch"] 
-  : ["View list of batches", "Enter new batch"];
+  const tabLabels = role === 'Advisor'
+  ? ['View list of batches']
+  : isEditing
+    ? ['View list of batches', 'Editing Batch']
+    : ['View list of batches', 'Enter new batch'];
+
   // 1st tab content = table
   const tableContent = (
     <>

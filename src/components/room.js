@@ -49,7 +49,10 @@ function Room() {
   // For delete modal
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [roomIdToDelete, setRoomIdToDelete] = useState(null);
-
+  const storedUser = localStorage.getItem('user');
+  const user = storedUser ? JSON.parse(storedUser) : null;
+  const role = user?.role; // "Advisor" or "DEO"
+  
   // BREADCRUMBS data
   const breadcrumbsListRooms = [
     { label: "Dashboard", url: "/dashboard" },
@@ -251,9 +254,12 @@ function Room() {
   // -----------------------------
   // TABS
   // -----------------------------
-  const tabLabels = isEditing 
-  ? ["View list of rooms", "Editing Room"] 
-  : ["View list of rooms", "Enter new Room"];
+  const tabLabels = role === 'Advisor'
+  ? ['View list of rooms']
+  : isEditing
+    ? ['View list of rooms', 'Editing Room']
+    : ['View list of rooms', 'Enter new Room'];
+
   // First tab content (list rooms)
   const tableContent = (
     <>

@@ -50,7 +50,10 @@ function Course() {
   // Delete modal
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [courseIdToDelete, setCourseIdToDelete] = useState(null);
-
+  const storedUser = localStorage.getItem('user');
+  const user = storedUser ? JSON.parse(storedUser) : null;
+  const role = user?.role; // "Advisor" or "DEO"
+  
   // -----------------------------
   // On Mount
   // -----------------------------
@@ -306,9 +309,12 @@ function Course() {
   // Build Tab Content
   // -----------------------------
 // Replace your existing tabLabels declaration with:
-const tabLabels = isEditing 
-  ? ["View list of courses", "Editing Course"] 
-  : ["View list of courses", "Enter new course"];
+const tabLabels = role === 'Advisor'
+  ? ['View list of courses']
+  : isEditing
+    ? ['View list of courses', 'Editing Course']
+    : ['View list of courses', 'Enter new course'];
+
   const tableContent = (
     <>
     <Box sx={{ mb: 2, maxWidth: 200 }}>
