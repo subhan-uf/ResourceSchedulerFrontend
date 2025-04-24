@@ -12,7 +12,7 @@ const CourseService = {
 
   // PUT
   updateCourse: (id, courseData) => apiClient.put(`/courses/${id}/`, courseData),
-
+  patchCourse:     (id, data) => apiClient.patch(`/courses/${id}/`, data),
   // DELETE
   deleteCourse: (id) => apiClient.delete(`/courses/${id}/`),
 };

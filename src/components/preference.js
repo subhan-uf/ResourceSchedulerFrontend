@@ -101,10 +101,13 @@ const [searchCourseQuery, setSearchCourseQuery] = useState("");
         if (selectedCourse && selectedSection && selectedTeacherId) {
           try {
             const resp = await batchCourseTeacherAssignmentService.getAllAssignments();
+            // Only keep non-archived assignments
+            const live = (resp.data || []).filter(a => !a.Archived);
             // Filter assignments for this teacher
-            const teacherRecords = resp.data.filter(
+            const teacherRecords = live.filter(
               (r) => r.Teacher_ID.toString() === selectedTeacherId.toString()
             );
+            
             // Filter for the selected course and section (handle object or raw Section)
             const relevant = teacherRecords.filter((r) => {
               if (r.Section && typeof r.Section === "object") {
@@ -268,10 +271,12 @@ const [searchCourseQuery, setSearchCourseQuery] = useState("");
 
       // Next: Fetch BatchCourseTeacherAssignment records for this teacher using string comparison
       const bctaResp = await batchCourseTeacherAssignmentService.getAllAssignments();
-      const allBCTAs = bctaResp.data;
-      const teacherBCTAs = allBCTAs.filter(
+      // Only keep non-archived assignments
+      const live = (bctaResp.data || []).filter(a => !a.Archived);
+      const teacherBCTAs = live.filter(
         (assignment) => assignment.Teacher_ID.toString() === teacherId.toString()
       );
+      
       const grouped = {};
       teacherBCTAs.forEach((assignment) => {
         // Skip this record if Section is null or undefined
@@ -722,8 +727,11 @@ const [searchCourseQuery, setSearchCourseQuery] = useState("");
           // NEW: If the teacher is setting a "Ground" floor preference, check the total sections
           if (preferredFloor.trim() === "Ground") {
             // 1) get all teacher‑course assignments
-            const bctaResp = await batchCourseTeacherAssignmentService.getAllAssignments();
-            const allBCTAs = bctaResp.data || [];
+// 1) get all teacher-course assignments
+const bctaResp = await batchCourseTeacherAssignmentService.getAllAssignments();
+// Only keep non-archived assignments
+const allBCTAs = (bctaResp.data || []).filter(a => !a.Archived);
+
           
             // 2) collect teacher IDs who will end up with a Ground‑floor pref
             const teachersWithGround = new Set(
@@ -1076,12 +1084,14 @@ for (const sec of timePreferences) {
         // Extract unique batch codes (first 4 characters) from the section options.
         const batchCodes = Array.from(new Set(
           sections.map(opt => {
-            // The label is expected in the format "BatchName - SectionName"
             const batchName = opt.label.split(' - ')[0] || '';
             return batchName.slice(0, 4);
           })
         ));
-        return `${obj.courseName} (${batchCodes.join(",")})`;
+        const displayCodes = batchCodes.length > 0
+          ? batchCodes.join(',')
+          : 'Archived';
+        return `${obj.courseName} (${displayCodes})`;
       },
     },
     
@@ -1357,7 +1367,7 @@ for (const sec of timePreferences) {
           sx={{
             position: 'absolute',
             top: 40,
-            right: 260,
+            right: 360,
             zIndex: 1000,
             borderRadius: 2,
             boxShadow: 2,

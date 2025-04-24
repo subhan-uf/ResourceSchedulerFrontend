@@ -106,7 +106,7 @@ const [sections, setSections] = useState([]); // all sections from the API
   const storedUser = localStorage.getItem('user');
   const user = storedUser ? JSON.parse(storedUser) : null;
   const role = user?.role; // "Advisor" or "DEO"
-  
+  const hideForAdvisor = role === 'Advisor';
   // ------------------------------------
   // LOAD TEACHERS, BATCHES, COURSES
   // ------------------------------------
@@ -178,8 +178,10 @@ useEffect(() => {
 useEffect(() => {
   const fetchBCTAs = async () => {
     try {
+ 
       const resp = await batchCourseTeacherAssignmentService.getAllAssignments();
-      setBctaAssignments(resp.data);
+      // Only keep non-archived assignments
+      setBctaAssignments(resp.data.filter(a => !a.Archived));
     } catch (error) {
       console.error("Error fetching BCTA assignments:", error);
     }
@@ -445,10 +447,11 @@ const getAvailableCoursesForMapping = (sectionId, courseType, currentIndex) => {
       });
 
       // 3) fetch all BCTA => gather batch IDs
-      const bctaResp = await batchCourseTeacherAssignmentService.getAllAssignments();
-      const teacherBCTAs = bctaResp.data.filter(
-        (a) => a.Teacher_ID === parseInt(teacherId, 10)
-      );
+     
+          const bctaResp = await batchCourseTeacherAssignmentService.getAllAssignments();
+          // Only non-archived assignments for this teacher
+          const teacherBCTAs = bctaResp.data
+            .filter(a => a.Teacher_ID === parseInt(teacherId, 10) && !a.Archived);
       // from those, gather the distinct batch IDs
       const uniqueBatchIDs = [
         ...new Set(teacherBCTAs.map((a) => a.Batch_ID)),
@@ -642,7 +645,8 @@ for (const mapping of assignmentMappings) {
 }
 
 const updatedBCTAs = await batchCourseTeacherAssignmentService.getAllAssignments();
-setBctaAssignments(updatedBCTAs.data);
+ // Only show non-archived from now on
+ setBctaAssignments(updatedBCTAs.data.filter(a => !a.Archived));
 
       fetchTeachers();
       resetForm();
@@ -710,6 +714,7 @@ setBctaAssignments(updatedBCTAs.data);
         tableRows={tableRows}
         onEdit={handleEdit}
         onDelete={handleDeleteClick}
+        hideActionsForAdvisor={hideForAdvisor}
       />
     </>
   );
@@ -1055,7 +1060,7 @@ setBctaAssignments(updatedBCTAs.data);
           sx={{
             position: 'absolute',
             top: 40,
-            right: 260,
+            right: 360,
             zIndex: 1000,
             borderRadius: 2,
             boxShadow: 2,

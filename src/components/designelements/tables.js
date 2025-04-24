@@ -10,11 +10,14 @@ export default function Tables({
   tableRows = [],
   onEdit = () => {},
   onDelete = () => {},
+  onArchive = () => {},
+  hideActionsForAdvisor = false,
 }) {
    const storedUser = localStorage.getItem('user');
  const user       = storedUser ? JSON.parse(storedUser) : null;
  const role       = user?.role;
  const isAdvisor  = role === 'Advisor';
+ const shouldHide = isAdvisor && hideActionsForAdvisor;
   return (
     <Box sx={{ width: "100%" }}>
       <Sheet
@@ -30,7 +33,7 @@ export default function Tables({
           background: `linear-gradient(to right, ${theme.vars.palette.background.surface} 30%, rgba(255, 255, 255, 0)),
             linear-gradient(to right, rgba(255, 255, 255, 0), ${theme.vars.palette.background.surface} 70%) 0 100%,
             radial-gradient(farthest-side at 0 50%, rgba(0,0,0,0.12), rgba(0,0,0,0)),
-     ${!isAdvisor ? `,
+     ${!shouldHide ? `,
      radial-gradient(farthest-side at 100% 50%, rgba(0,0,0,0.12), rgba(0,0,0,0)) 0 100%` : ''}
    `,
           backgroundSize:
@@ -53,47 +56,88 @@ export default function Tables({
               boxShadow: "1px 0 var(--TableCell-borderColor)",
               bgcolor: "background.surface",
             },
+            "& tr > *:nth-last-child(2)": {
+  position: shouldHide ? "static" : "sticky",
+  right:    shouldHide ? "auto"   : "var(--Table-lastColumnWidth)",
+  boxShadow: "-1px 0 var(--TableCell-borderColor)",
+  bgcolor: "background.surface",
+},
+
             "& tr > *:last-child": {
-                position: isAdvisor ? "static" : "sticky",
-                right:    isAdvisor ? "auto"   : 0,
+                position: shouldHide ? "static" : "sticky",
+                right:    shouldHide ? "auto"   : 0,
               bgcolor: "var(--TableCell-headBackground)",
             },
           }}
         >
-          <thead>
-            <tr>
-              {tableHeadings.map((heading, index) => (
-                <th
-                  key={index}
-                  style={{
-                    width: index === 0 ? "var(--Table-firstColumnWidth)" : 200,
-                  }}
-                >
-                  {heading}
-                </th>
-              ))}
-              {!tableHeadings.includes("Actions") && (
+         <thead>
+  <tr>
+    {tableHeadings.map((h, i) => (
+      <th key={i} style={{ width: i === 0 ? "var(--Table-firstColumnWidth)" : 200 }}>
+        {h}
+      </th>
+    ))}
+    {!tableHeadings.includes("Actions") && (
       <th style={{ width: "var(--Table-lastColumnWidth)" }}>Actions</th>
     )}
-            </tr>
-          </thead>
-          <tbody>
-  {tableRows.map((row, rowIndex) => (
-    <tr key={rowIndex}>
-      {tableHeadings.slice(0, -1).map((_, cellIndex) => (
-        <td key={cellIndex}>{row[cellIndex] || ''}</td>
-      ))}
-      <td>
-         { !isAdvisor && (
-     <Box sx={{ display: "flex", gap: 1 }}>
-       <Button size="sm" variant="plain" color="neutral" onClick={() => onEdit(row)}>Edit</Button>
-       <Button size="sm" variant="soft" color="danger" onClick={() => onDelete(row)}>Delete</Button>
-     </Box>
-   )}
-      </td>
-    </tr>
-  ))}
+  </tr>
+</thead>
+<tbody>
+  {tableRows.map((row, rowIndex) => {
+    // find where “Archived” lives
+    const archivedIdx = tableHeadings.findIndex(h => h === "Archived");
+    const isArchived   = archivedIdx >= 0 && row[archivedIdx];
+
+    return (
+      <tr
+        key={rowIndex}
+        style={isArchived ? { backgroundColor: "rgba(255,0,0,0.4)" } : {}}
+      >
+        {tableHeadings.map((heading, cellIndex) => {
+          // Actions cell
+          if (heading === "Actions") {
+            return (
+              <td key={cellIndex}>
+                {!shouldHide && (
+                  <Box sx={{ display: "flex", gap: 1 }}>
+                    <Button size="sm" variant="plain" onClick={() => onEdit(row)}>
+                      Edit
+                    </Button>
+                    <Button size="sm" variant="soft" color="danger" onClick={() => onDelete(row)}>
+                      Delete
+                    </Button>
+                  </Box>
+                )}
+              </td>
+            );
+          }
+
+          // Archived cell
+          if (heading === "Archived") {
+            return (
+              <td key={cellIndex}>
+                {!shouldHide && (
+                  <Button
+                    size="sm"
+                    variant="plain"
+                    color={isArchived ? "success" : "neutral"}
+                    onClick={() => onArchive(row)}
+                  >
+                    {isArchived ? "Unarchive" : "Archive"}
+                  </Button>
+                )}
+              </td>
+            );
+          }
+
+          // any other column
+          return <td key={cellIndex}>{row[cellIndex]}</td>;
+        })}
+      </tr>
+    );
+  })}
 </tbody>
+
         </Table>
       </Sheet>
     </Box>
@@ -105,6 +149,7 @@ Tables.propTypes = {
   tableRows: PropTypes.arrayOf(PropTypes.array),
   onEdit: PropTypes.func,
   onDelete: PropTypes.func,
+  onArchive:    PropTypes.func,
 };
 
 Tables.defaultProps = {

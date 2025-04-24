@@ -45,7 +45,7 @@ const [disciplinesOptions, setDisciplinesOptions] = useState([]);
   const storedUser = localStorage.getItem('user');
   const user = storedUser ? JSON.parse(storedUser) : null;
   const role = user?.role; // "Advisor" or "DEO"
-  
+  const hideForAdvisor = role === 'Advisor';
   // -----------------------------
   // Fetch Batches & Sections
   // -----------------------------
@@ -388,6 +388,7 @@ const [disciplinesOptions, setDisciplinesOptions] = useState([]);
       tableRows={tableRows}
       onEdit={handleEdit}
       onDelete={handleDeleteClick}
+      hideActionsForAdvisor={hideForAdvisor}
     />
     </>
   );
@@ -530,7 +531,7 @@ const [disciplinesOptions, setDisciplinesOptions] = useState([]);
           sx={{
             position: 'fixed',
             top: 120,
-            right: 260,
+            right: 360,
             zIndex: 1000,
             borderRadius: 2,
             boxShadow: 2,

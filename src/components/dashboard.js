@@ -36,7 +36,7 @@ export default function Dashboard() {
       roles: ["Advisor", "DEO"],
       heading: "Course Management",
       subtext: "Add, delete, edit and view courses",
-      imageSrc: "course.png",
+      imageSrc: "course2.png",
       linkTo: "/course",
     },
     {

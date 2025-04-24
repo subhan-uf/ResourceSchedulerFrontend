@@ -71,9 +71,11 @@ const [anyPublished, setAnyPublished] = useState(false);
 const [currentTab, setCurrentTab] = useState(0);
 const [sessionTypeOptions, setSessionTypeOptions] = useState([]);  
 async function fetchSessionTypeOptions(teacherID, courseID, sectionID) {
-  const resp = await batchCourseTeacherAssignmentService.getAllAssignments();
-  // pick only assignments for this teacher/course/section:
-  const ours = resp.data.filter(a =>
+   const resp = await batchCourseTeacherAssignmentService.getAllAssignments();
+ // first throw away any archived assignments:
+ const live = resp.data.filter(a => !a.Archived);
+ // pick only assignments for this teacher/course/section:
+ const ours = live.filter(a =>
     Number(a.Teacher_ID) === Number(teacherID) &&
     a.Course_ID            === courseID &&
     Number(a.Section)      === Number(sectionID)
@@ -452,7 +454,8 @@ useEffect(() => {
         try {
           const resp = await batchCourseTeacherAssignmentService.getAllAssignments();
           const numericTeacherID = Number(teacherID);
-          const assignments = resp.data.filter(a => 
+           const live = resp.data.filter(a => !a.Archived);
+           const assignments = live.filter(a =>
             Number(a.Teacher_ID) === numericTeacherID // Ensure comparison as numbers
           );
           setTeacherAssignments(assignments);
@@ -795,7 +798,8 @@ const getDayIndex = (day) => {
           const numericTeacherID = Number(teacherID);
           const numericSectionID = Number(sectionID);
           // Filter assignments by teacher and section (both as numbers)
-          const assignments = resp.data.filter(a => 
+          const live = resp.data.filter(a => !a.Archived);
+          const assignments = live.filter(a =>
             a.Teacher_ID === numericTeacherID &&
             a.Section === numericSectionID
           );
@@ -1296,7 +1300,7 @@ setSessionTypeOptions([]);
           sx={{
             position: 'absolute',
             top: 40,
-            right: 16,
+            right: 360,
             zIndex: 1000,
             borderRadius: 2,
             boxShadow: 2,

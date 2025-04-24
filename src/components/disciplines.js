@@ -54,9 +54,9 @@ function DisciplineAndLabSettingsPage() {
   // -----------------------------
   // EDITING STATE for disciplines
   // -----------------------------
-  const [isEditing, setIsEditing] = useState(false);
-  // In our design the PK is the discipline Name (for editing)
-  const [editingDisciplineId, setEditingDisciplineId] = useState(null);
+  // const [isEditing, setIsEditing] = useState(false);
+  // // In our design the PK is the discipline Name (for editing)
+  // const [editingDisciplineId, setEditingDisciplineId] = useState(null);
 
   // -----------------------------
   // Delete confirmation state
@@ -153,47 +153,47 @@ function DisciplineAndLabSettingsPage() {
   };
 
   // When clicking on a discipline chip, enable editing.
-  const handleEditDiscipline = (disc) => {
-    setDisciplineInput(disc.Name);
-    setLabDaySetting(disc.LabDayConfig || "option1");
-    setIsEditing(true);
-    setEditingDisciplineId(disc.Name); // Using Name as the PK
-  };
+  // const handleEditDiscipline = (disc) => {
+  //   setDisciplineInput(disc.Name);
+  //   setLabDaySetting(disc.LabDayConfig || "option1");
+  //   setIsEditing(true);
+  //   setEditingDisciplineId(disc.Name); // Using Name as the PK
+  // };
 
-  // Update discipline in local state and update immediately in DB.
-  const handleUpdateDisciplineLocal = async () => {
-    if (!disciplineInput.trim()) {
-      showSnackbar("Discipline name cannot be empty.", "danger");
-      return;
-    }
-    const payload = {
-      Name: disciplineInput.trim(),
-      Lab_day_selection: labDaySetting === "option2" ? 2 : 1,
-    };
-    try {
-      const resp = await disciplineService.updateDiscipline(editingDisciplineId, payload);
-      const updated = {
-        ...resp.data,
-        LabDayConfig:
-          resp.data.Lab_day_selection === 1
-            ? "option1"
-            : resp.data.Lab_day_selection === 2
-            ? "option2"
-            : "",
-      };
-      const updatedList = disciplines.map((disc) =>
-        disc.Name === editingDisciplineId ? updated : disc
-      );
-      setDisciplines(updatedList);
-      setIsEditing(false);
-      setEditingDisciplineId(null);
-      setDisciplineInput("");
-      showSnackbar("Discipline updated in database.", "success");
-    } catch (error) {
-      console.error("Error updating discipline:", error);
-      showSnackbar("Failed to update discipline.", "danger");
-    }
-  };
+  // // Update discipline in local state and update immediately in DB.
+  // const handleUpdateDisciplineLocal = async () => {
+  //   if (!disciplineInput.trim()) {
+  //     showSnackbar("Discipline name cannot be empty.", "danger");
+  //     return;
+  //   }
+  //   const payload = {
+  //     Name: disciplineInput.trim(),
+  //     Lab_day_selection: labDaySetting === "option2" ? 2 : 1,
+  //   };
+  //   try {
+  //     const resp = await disciplineService.updateDiscipline(editingDisciplineId, payload);
+  //     const updated = {
+  //       ...resp.data,
+  //       LabDayConfig:
+  //         resp.data.Lab_day_selection === 1
+  //           ? "option1"
+  //           : resp.data.Lab_day_selection === 2
+  //           ? "option2"
+  //           : "",
+  //     };
+  //     const updatedList = disciplines.map((disc) =>
+  //       disc.Name === editingDisciplineId ? updated : disc
+  //     );
+  //     setDisciplines(updatedList);
+  //     setIsEditing(false);
+  //     setEditingDisciplineId(null);
+  //     setDisciplineInput("");
+  //     showSnackbar("Discipline updated in database.", "success");
+  //   } catch (error) {
+  //     console.error("Error updating discipline:", error);
+  //     showSnackbar("Failed to update discipline.", "danger");
+  //   }
+  // };
 
   // Delete discipline immediately from the DB when X is clicked.
   const handleDeleteDisciplineImmediately = async (id) => {
@@ -260,15 +260,15 @@ function DisciplineAndLabSettingsPage() {
             value={disciplineInput}
             onChange={(e) => setDisciplineInput(e.target.value)}
           />
-          {isEditing ? (
+          {/* {isEditing ? (
             <Button variant="contained" onClick={handleUpdateDisciplineLocal}>
               Update
             </Button>
-          ) : (
+          ) : ( */}
             <Button variant="contained" onClick={handleAddDisciplineLocal}>
               Add
             </Button>
-          )}
+          {/* )} */}
         </Box>
         <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
                   {disciplines.map((disc) => (
@@ -276,7 +276,7 @@ function DisciplineAndLabSettingsPage() {
               key={disc.Name}
               label={disc.Name}
               onDelete={() => handleDeleteClick(disc.Name)}    // <-- open confirmation instead
-              onClick={() => handleEditDiscipline(disc)}
+              // onClick={() => handleEditDiscipline(disc)}
               color="primary"
             />
           ))}

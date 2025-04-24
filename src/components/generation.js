@@ -147,7 +147,9 @@ const [currentAcademicYear, setCurrentAcademicYear] = useState(
         setBatches(batchRes.data || []);
         setCourses(courseRes.data || []);
         setTcaList(tcaRes.data || []);
-        setBctaList(bctaRes.data || []);
+         setBctaList(
+             (bctaRes.data || []).filter(assignment => assignment.Archived !== true)
+           );
         setCoursePrefs(coursePrefsRes.data || []);
       } catch (error) {
         console.error("Error fetching data:", error);
@@ -414,12 +416,17 @@ const [currentAcademicYear, setCurrentAcademicYear] = useState(
       const year = batch.Year ? currentAcademicYear- batch.Year  : 1;
       // console.log("YEARRR", year)
       const key = `${batch.Discipline}, ${year}`;
-      const batchCourses = courses.filter((course) => {
-        if (typeof course.Batch_ID === "object") {
-          return course.Batch_ID.Batch_ID === batch.Batch_ID;
-        }
-        return course.Batch_ID === batch.Batch_ID;
-      });
+// after: only include courses in this batch that are not archived
+const batchCourses = courses.filter((course) => {
+  // figure out the batch‐id on the course object
+  const courseBatchId =
+    typeof course.Batch_ID === "object"
+      ? course.Batch_ID.Batch_ID
+      : course.Batch_ID;
+  // only include if it matches this batch AND isn’t archived
+  return courseBatchId === batch.Batch_ID && course.Archived !== true;
+});
+
       const batchSections = sections.filter((section) => {
         if (typeof section.Batch_ID === "object") {
           return section.Batch_ID.Batch_ID === batch.Batch_ID;
@@ -656,16 +663,37 @@ if (targetDetail && targetDetail.Course_ID) {
         for (const course of info.courses) {
           // For theory, always required.
           const theoryKey = [discipline, batchId, year, sectionIndex, course.name, "theory"].join('|');
-          if (!assignmentSet.has(theoryKey)) {
-            const sectionId = info.sections[sectionIndex];
-            const sectionObj = sections.find(s => String(s.Section_ID) === String(sectionId));
-            const batchObj = batches.find(b => String(b.Batch_ID) === String(batchId));
-            const sectionName = sectionObj?.Section_name ?? `Section ${sectionIndex + 1}`;
-            const batchName = batchObj?.Batch_name ?? batchId;
-            return `${sectionName} (${batchName}) is missing a THEORY teacher for course ${course.name}`;
-                      }
+              if (!assignmentSet.has(theoryKey)) {
+                  // -- skip error if this course in this batch is marked archived --
+                  const courseRecord = courses.find(c =>
+                    c.Course_ID === course.id &&
+                    (typeof c.Batch_ID === 'object'
+                       ? c.Batch_ID.Batch_ID
+                       : c.Batch_ID) === batchId
+                  );
+                  if (courseRecord?.Archived) {
+                    continue;  // go on to the next course without throwing
+                  }
+            
+                  // otherwise fall through and return the error
+                  const sectionId   = info.sections[sectionIndex];
+                  const sectionObj  = sections.find(s => String(s.Section_ID) === String(sectionId));
+                  const batchObj    = batches .find(b => String(b.Batch_ID)   === String(batchId));
+                  const sectionName = sectionObj?.Section_name ?? `Section ${sectionIndex + 1}`;
+                  const batchName   = batchObj?.Batch_name   ?? batchId;
+                  return `${sectionName} (${batchName}) is missing a THEORY teacher for course ${course.name}`;
+                }
           // For courses that have a lab component, also require a lab teacher.
           if (course.is_lab) {
+                    const courseRecord = courses.find(c =>
+                        c.Course_ID === course.id &&
+                        (typeof c.Batch_ID === 'object'
+                           ? c.Batch_ID.Batch_ID
+                           : c.Batch_ID) === batchId
+                      );
+                      if (courseRecord?.Archived) {
+                        continue;
+                      }
             
             const labKey = [discipline, batchId, year, sectionIndex, course.name, "lab"].join('|');
             const sectionId = info.sections[sectionIndex];
@@ -1362,9 +1390,10 @@ const detailPayload = {
                 })}
               </Box>
             ) : (
-              <Box sx={{ mt: 4 }}>
-                <div>No timetable generated yet</div>
-              </Box>
+<Box sx={{ mt: 4, textAlign: 'center' }}>
+  <div>No timetable generated yet</div>
+</Box>
+
             )}
 {generatedData && (
   <Box sx={{ display: "flex", justifyContent: "center", gap: 2, mt: 4 }}>

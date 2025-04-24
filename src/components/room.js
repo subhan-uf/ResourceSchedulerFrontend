@@ -52,7 +52,7 @@ function Room() {
   const storedUser = localStorage.getItem('user');
   const user = storedUser ? JSON.parse(storedUser) : null;
   const role = user?.role; // "Advisor" or "DEO"
-  
+  const hideForAdvisor = role === 'Advisor';
   // BREADCRUMBS data
   const breadcrumbsListRooms = [
     { label: "Dashboard", url: "/dashboard" },
@@ -278,6 +278,7 @@ function Room() {
         tableRows={tableRows}
         onEdit={handleEdit}
         onDelete={handleDeleteClick}
+        hideActionsForAdvisor={hideForAdvisor}
       />
     </>
   );
@@ -429,7 +430,7 @@ function Room() {
           sx={{
             position: 'absolute',
             top: 40,
-            right: 260,
+            right: 360,
             zIndex: 1000,
             borderRadius: 2,
             boxShadow: 2,

@@ -11,6 +11,7 @@ import BatchService from "./api/batchService";
 import Checkboxx from "./designelements/checkbox";
 import coursePreferenceService from "./api/courseTimePreferenceService";
 import Dropdown from "./designelements/multipledropdown";
+import batchCourseTeacherAssignmentService from "./api/batchCourseTeacherAssignmentService";
 
 function Course() {
   // -----------------------------
@@ -33,6 +34,7 @@ function Course() {
     Max_classes_per_day: "",
     Credit_hours: "",
     Course_desc: "",
+    Archived: false,
   });
   
 
@@ -46,6 +48,7 @@ function Course() {
 
   // Tab control
   const [currentTab, setCurrentTab] = useState(0);
+  const [bctaList, setBctaList] = useState([]);
 
   // Delete modal
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -53,13 +56,14 @@ function Course() {
   const storedUser = localStorage.getItem('user');
   const user = storedUser ? JSON.parse(storedUser) : null;
   const role = user?.role; // "Advisor" or "DEO"
-  
+  const hideForAdvisor = role === 'Advisor';
   // -----------------------------
   // On Mount
   // -----------------------------
   useEffect(() => {
     fetchAllCourses();
     fetchAllBatches();
+    fetchAllBctas();
   }, []);
 
   const fetchAllCourses = async () => {
@@ -87,7 +91,7 @@ function Course() {
   // -----------------------------
   // Table
   // -----------------------------
-  const tableHeadings = [
+  const baseHeadings = [
     "Course Code",
     "Course Name",
     "Discipline",
@@ -96,8 +100,12 @@ function Course() {
     "Credit Hours",
     "Description",
     "Course Type",
-    "Actions",
   ];
+  
+  const tableHeadings = role === "Advisor"
+    ? [...baseHeadings, "Actions"]
+    : [...baseHeadings, "Archived", "Actions"];
+
   const filteredCourses = courses.filter(course =>
     Object.values({
       Course_code: course.Course_code,
@@ -109,26 +117,90 @@ function Course() {
       .toLowerCase()
       .includes(searchQuery.toLowerCase())
   );
+  const sortedCourses = filteredCourses
+  .slice()
+  .sort((a, b) =>
+    a.Archived === b.Archived
+      ? 0
+      : a.Archived
+        ? 1
+        : -1
+  );
 
   // Convert courses into table rows
-  const tableRows = filteredCourses.map((course) => {
-    // Real PK might be course.Course_ID or course.id
-    const pk = course.Course_ID; 
-    // find matching batch
-    const foundBatch = batches.find((b) => b.Batch_ID === course.Batch_ID);
-
-    return [
-      course.Course_code,
-      course.Course_name,
-      foundBatch ? foundBatch.Discipline : "N/A",
-      foundBatch ? foundBatch.Batch_name : "N/A",
-      course.Max_classes_per_day,
-      course.Credit_hours,
-      course.Course_desc,
-      course.Is_Lab ? "Lab+Theory Course" : "Theory Only Course",
-      pk, // last item used for edit/delete
+  const tableRows = sortedCourses.map(c => {
+    const core = [
+      c.Course_code,
+      c.Course_name,
+      (batches.find(b=>b.Batch_ID===c.Batch_ID)?.Discipline) || "N/A",
+      (batches.find(b=>b.Batch_ID===c.Batch_ID)?.Batch_name)  || "N/A",
+      c.Max_classes_per_day,
+      c.Credit_hours,
+      c.Course_desc,
+      c.Is_Lab ? "Lab+Theory Course" : "Theory Only Course",
     ];
+  
+    if (role === "Advisor") {
+      return [...core, c.Course_ID];
+    } else {
+      return [...core, c.Archived, c.Course_ID];
+    }
   });
+  async function fetchAllBctas() {
+    const resp = await batchCourseTeacherAssignmentService.getAllAssignments();
+    // only keep the non-archived ones in your local list
+    setBctaList(resp.data.filter(a => a.Archived !== true));
+  }
+  
+  const handleArchiveToggle = async (row) => {
+   
+       const archivedIdx = tableHeadings.findIndex(h => h==="Archived");
+       const currently   = row[archivedIdx];
+       const courseId    = row[row.length - 1];
+    
+        try {
+   
+         // 1) Toggle the course itself
+         await CourseService.patchCourse(courseId, { Archived: !currently });
+    
+         // 2) Look up the batch of this course so we can find BCTAs
+  // 2) Re-fetch the just-toggled course so we know its Batch_ID
+  const { data: updatedCourse } = await CourseService.getCourseById(courseId);
+  const batchId = updatedCourse.Batch_ID;
+
+  // 3) Fetch all BCTAs, then filter to this course+batch
+  const bctaResp = await batchCourseTeacherAssignmentService.getAllAssignments();
+  const related = bctaResp.data.filter(a =>
+    String(a.Course_ID) === String(courseId) &&
+    String(a.Batch_ID?.Batch_ID || a.Batch_ID) === String(batchId)
+  );
+
+  // 4) Patch them all
+  await Promise.all(
+    related.map(a =>
+      batchCourseTeacherAssignmentService.patchAssignment(
+        a.Assignment_ID,
+        { Archived: !currently }
+      )
+    )
+  );
+
+  // 5) Refresh your local BCTAs so “unarchived” ones come back
+  await fetchAllBctas();
+
+    
+          showSnackbar(
+   
+           `Course ${!currently ? "archived" : "unarchived"} successfully!`,
+            "success"
+          );
+          fetchAllCourses();
+        } catch (err) {
+          console.error(err);
+          showSnackbar("Failed to toggle archive.", "danger");
+        }
+      };
+    
 
   // -----------------------------
   // Edit
@@ -154,6 +226,7 @@ function Course() {
         Credit_hours: foundCourse.Credit_hours?.toString() || "",
         Course_desc: foundCourse.Course_desc || "",
         Is_Lab: !!foundCourse.Is_Lab,
+        Archived:          !!foundCourse.Archived,
       });
       
       
@@ -213,7 +286,7 @@ function Course() {
         Is_Lab: !!courseData.Is_Lab,
         // Assume Batch_ID is now an array; if your backend expects multiple batches,
         // send it as is. If your backend expects a single value, you might need to change that API.
-       
+        Archived: courseData.Archived,
       };
       
         // Look for an existing course with the same code & batch
@@ -330,6 +403,8 @@ const tabLabels = role === 'Advisor'
       tableRows={tableRows}
       onEdit={handleEdit}
       onDelete={handleDeleteClick}
+      onArchive={handleArchiveToggle}
+      hideActionsForAdvisor={hideForAdvisor}
     />
   </>
   );
@@ -568,7 +643,7 @@ const tabLabels = role === 'Advisor'
           sx={{
             position: 'absolute',
             top: 40,
-            right: 260,
+            right: 360,
             zIndex: 1000,
             borderRadius: 2,
             boxShadow: 2,
