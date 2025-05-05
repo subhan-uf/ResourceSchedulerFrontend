@@ -386,6 +386,7 @@ const getAvailableCoursesForMapping = (sectionId, courseType, currentIndex) => {
     "Email",
     "Phone",
     "Seniority",
+    "Assignments",
     "Actions",
   ];
   const filteredTeachers = teachers.filter(t =>
@@ -401,8 +402,13 @@ const getAvailableCoursesForMapping = (sectionId, courseType, currentIndex) => {
       .toLowerCase()
       .includes(searchQuery.toLowerCase())
   );
+  const assignCountByTeacher = bctaAssignments.reduce((acc, a) => {
+    acc[a.Teacher_ID] = (acc[a.Teacher_ID] || 0) + 1;
+    return acc;
+  }, {});
   const tableRows = filteredTeachers.map((tch) => {
     const pk = tch.Teacher_ID;
+    const count = assignCountByTeacher[pk] || 0;
     return [
       tch.Teacher_ID,
       tch.Name,
@@ -410,10 +416,21 @@ const getAvailableCoursesForMapping = (sectionId, courseType, currentIndex) => {
       tch.Email,
       tch.Phone,
       tch.Seniority,
+      count,
       pk, // last item for Edit/Delete
     ];
   });
 
+    // natural sort by Teacher ID (first column)
+    const sortedRows = tableRows
+      .slice()
+      .sort((a, b) =>
+        String(a[0]).localeCompare(
+          String(b[0]),
+          undefined,
+          { numeric: true, sensitivity: 'base' }
+        )
+      );
   // ------------------------------------
   // EDIT
   //  1) fetch teacher
@@ -556,20 +573,20 @@ const healthOptions = [
   // ------------------------------------
   // SUBMIT
   //   1) create/update teacher
-  //   2) remove old TCA + BCTA => re-create
+  //   2) remove old TCA  BCTA => re-create
   // ------------------------------------
   const handleStopEditing = () => {
     resetForm(); // Reuse your existing reset function
   };
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const validMappings = assignmentMappings.filter(mapping => 
-      mapping.sectionId && mapping.courseType && mapping.courseId
-    );
-    if (validMappings.length === 0) {
-      showSnackbar("At least one assignment must be provided.", "danger");
-      return;
-    }
+    // const validMappings = assignmentMappings.filter(mapping => 
+    //   mapping.sectionId && mapping.courseType && mapping.courseId
+    // );
+    // if (validMappings.length === 0) {
+    //   showSnackbar("At least one assignment must be provided.", "danger");
+    //   return;
+    // }
     const teacherPayload = {
       Teacher_ID: parseInt(formData.Teacher_ID, 10),
       Name: formData.Name,
@@ -700,18 +717,41 @@ const updatedBCTAs = await batchCourseTeacherAssignmentService.getAllAssignments
   // Tab 1 => teacher list
   const tableContent = (
     <>
-      <BasicBreadcrumbs breadcrumbs={breadcrumbsList} />
-      <Box sx={{ mb: 2, maxWidth: 200 }}>
-      <TextField
-        label="Search teachers..."
-        fullWidth
-        value={searchQuery}
-        onChange={(e) => setSearchQuery(e.target.value)}
-      />
-    </Box>
+ <Box
+   sx={{
+     mb: 2,
+     display: 'flex',
+     justifyContent: 'space-between',
+     alignItems: 'center',
+   }}
+ >
+   {/* search bar */}
+   <Box sx={{ width: 200 }}>
+     <TextField
+       label="Search teachers..."
+       fullWidth
+       value={searchQuery}
+       onChange={(e) => setSearchQuery(e.target.value)}
+     />
+   </Box>
+
+   {/* legend key */}
+   <Box
+     sx={{
+       px: 2,
+       py: 1,
+       bgcolor: 'rgba(255,255,0,0.3)',
+       borderRadius: 1,
+     }}
+   >
+     <Typography variant="body2">
+       Yellow = No assignments
+     </Typography>
+   </Box>
+ </Box>
       <Tables
         tableHeadings={tableHeadings}
-        tableRows={tableRows}
+        tableRows={sortedRows}
         onEdit={handleEdit}
         onDelete={handleDeleteClick}
         hideActionsForAdvisor={hideForAdvisor}

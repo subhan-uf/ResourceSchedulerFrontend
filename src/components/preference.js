@@ -1308,7 +1308,7 @@ for (const sec of timePreferences) {
           {/* Floor */}
           <FormControl fullWidth>
             <Singledropdown
-              label="Floor Constraint (Hard)"
+              label="Hard Floor Constraint (Optional)"
               name="preferredFloor"
               value={preferredFloor}
               menuItems={[
@@ -1327,7 +1327,8 @@ for (const sec of timePreferences) {
       fields={fieldsTime}
       sectionTitle="Preference"
       getSectionTitle={getSectionTitle}
-      {...(timePreferences.length === 0 ? { addButtonText: "Add new preference" } : {})}
+      addButtonText="Add new preference"
+      hideAddButton={timePreferences.length > 0}
       onPreferencesChange={handleTimePreferencesChange}
       initialSections={timePreferences}
     />

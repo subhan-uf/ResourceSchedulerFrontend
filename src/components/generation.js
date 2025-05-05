@@ -1381,7 +1381,7 @@ const detailPayload = {
                       </div>
                       <Box sx={{ mt: 1, textAlign: "right", width: "100%", maxWidth: "4xl", px: 2 }}>
                         <Typography variant="caption">
-                          Last edited by: {header.last_edited_by }
+                          {/* Last edited by: {header.last_edited_by } */}
                         </Typography>
                       </Box>
                     </Box>

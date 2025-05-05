@@ -132,6 +132,13 @@ const [disciplinesOptions, setDisciplinesOptions] = useState([]);
       pk, // last element is the batch ID
     ];
   });
+  const sortedRows = tableRows
+  .slice()
+  .sort((a, b) => {
+    const ya = parseInt(a[2], 10);
+    const yb = parseInt(b[2], 10);
+    return ya - yb;
+  });
 
   // -----------------------------
   // Edit
@@ -385,7 +392,7 @@ const [disciplinesOptions, setDisciplinesOptions] = useState([]);
     </Box>
     <Tables
       tableHeadings={tableHeadings}
-      tableRows={tableRows}
+      tableRows={sortedRows}
       onEdit={handleEdit}
       onDelete={handleDeleteClick}
       hideActionsForAdvisor={hideForAdvisor}

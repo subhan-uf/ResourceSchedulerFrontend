@@ -60,6 +60,7 @@ export default function TabsTeachers({
         onChange={handleTabChange}
         sx={(theme) => ({
           mx: 'auto',
+          justifyContent: 'center',
           borderRadius: '12px',
           overflow: 'visible',
           transition: '0.3s all',
@@ -151,10 +152,8 @@ export default function TabsTeachers({
           transition: '0.3s all',
           minHeight: 120,
           boxShadow: '0px 8px 16px rgba(0, 0, 0, 0.04)',
-          '&:hover': {
-            transform: 'translateY(-2px)',
-            boxShadow: '0px 12px 24px rgba(0, 0, 0, 0.08)'
-          }
+          
+       
         }}
       >
         {typeof tabContent[currentIndex] === 'function'

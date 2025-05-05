@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import TabsTeachers from "./designelements/tabforall";
 import Tables from "./designelements/tables";
 import TextField from "@mui/material/TextField";
@@ -12,6 +12,7 @@ import Checkboxx from "./designelements/checkbox";
 import coursePreferenceService from "./api/courseTimePreferenceService";
 import Dropdown from "./designelements/multipledropdown";
 import batchCourseTeacherAssignmentService from "./api/batchCourseTeacherAssignmentService";
+import disciplineService from "./api/disciplineService";
 
 function Course() {
   // -----------------------------
@@ -21,7 +22,7 @@ function Course() {
   const [snackbarMessage, setSnackbarMessage] = useState("");
   const [snackbarColor, setSnackbarColor] = useState("neutral"); // success, danger, etc.
   const [searchQuery, setSearchQuery] = useState("");
-
+  const [disciplineOptions, setDisciplineOptions] = useState([]);
   // -----------------------------
   // Course Form Data
   // -----------------------------
@@ -60,6 +61,17 @@ function Course() {
   // -----------------------------
   // On Mount
   // -----------------------------
+    useEffect(() => {
+        disciplineService
+          .getAllDisciplines()
+          .then(({ data }) => {
+            // data is array of { Name }
+            setDisciplineOptions(
+              data.map((d) => ({ label: d.Name, value: d.Name }))
+            );
+          })
+          .catch((e) => console.error("Failed loading disciplines", e));
+      }, []);
   useEffect(() => {
     fetchAllCourses();
     fetchAllBatches();
@@ -146,6 +158,22 @@ function Course() {
       return [...core, c.Archived, c.Course_ID];
     }
   });
+    const archivedIdx = tableHeadings.findIndex(h => h === "Archived");
+    const sortedRows = tableRows
+      .slice()
+      .sort((a, b) => {
+        const aArch = archivedIdx >= 0 && a[archivedIdx];
+        const bArch = archivedIdx >= 0 && b[archivedIdx];
+        // non-archived first
+        if (aArch !== bArch) return aArch ? 1 : -1;
+        // within same group, natural sort on first column
+        return String(a[0]).localeCompare(
+          String(b[0]),
+          undefined,
+          { numeric: true, sensitivity: 'base' }
+        );
+      });
+
   async function fetchAllBctas() {
     const resp = await batchCourseTeacherAssignmentService.getAllAssignments();
     // only keep the non-archived ones in your local list
@@ -390,17 +418,41 @@ const tabLabels = role === 'Advisor'
 
   const tableContent = (
     <>
-    <Box sx={{ mb: 2, maxWidth: 200 }}>
-      <TextField
-        label="Search courses..."
-        fullWidth
-        value={searchQuery}
-        onChange={(e) => setSearchQuery(e.target.value)}
-      />
-    </Box>
+ <Box
+   sx={{
+     mb: 2,
+     display: 'flex',
+     justifyContent: 'space-between',
+     alignItems: 'center',
+   }}
+ >
+   {/* search bar */}
+   <Box sx={{ width: 200 }}>
+     <TextField
+       label="Search courses..."
+       fullWidth
+       value={searchQuery}
+       onChange={(e) => setSearchQuery(e.target.value)}
+     />
+   </Box>
+
+   {/* legend key */}
+   <Box
+     sx={{
+       px: 2,
+       py: 1,
+       bgcolor: '#ffcdd2',
+       borderRadius: 1,
+     }}
+   >
+     <Typography variant="body2">
+       Red = Archived Course
+     </Typography>
+   </Box>
+ </Box>
     <Tables
       tableHeadings={tableHeadings}
-      tableRows={tableRows}
+      tableRows={sortedRows}
       onEdit={handleEdit}
       onDelete={handleDeleteClick}
       onArchive={handleArchiveToggle}
@@ -422,6 +474,7 @@ const tabLabels = role === 'Advisor'
           borderRadius: 2,
           // boxShadow: 4,
           backgroundColor: "transparent",
+          
         }}
       >
         <TextField
@@ -519,26 +572,14 @@ const tabLabels = role === 'Advisor'
       label="Discipline"
       name="discipline"
       value={courseData.Discipline}  // string value in edit mode
-      menuItems={[
-        { label: "Computer Science", value: "Computer Science" },
-        { label: "Artificial Intelligence", value: "Artificial Intelligence" },
-        { label: "Cyber Security", value: "Cyber Security" },
-        { label: "Gaming and Animation", value: "Gaming and Animation" },
-        { label: "Data Science", value: "Data Science" },
-      ]}
+      menuItems={disciplineOptions}
       onChange={(newVal) => setCourseData({ ...courseData, Discipline: newVal })}
       required
     />
   ) : (
     <Dropdown
       heading="Discipline (Select Multiple)"
-      menuItems={[
-        { label: "Computer Science", value: "Computer Science" },
-        { label: "Artificial Intelligence", value: "Artificial Intelligence" },
-        { label: "Cyber Security", value: "Cyber Security" },
-        { label: "Gaming and Animation", value: "Gaming and Animation" },
-        { label: "Data Science", value: "Data Science" },
-      ]}
+      menuItems={disciplineOptions}
       value={courseData.Discipline}  // array
       onChange={(selectedValues) => {
         const filteredBatchIDs = courseData.Batch_ID.filter((bid) => {

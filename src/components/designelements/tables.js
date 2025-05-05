@@ -87,11 +87,20 @@ export default function Tables({
     // find where “Archived” lives
     const archivedIdx = tableHeadings.findIndex(h => h === "Archived");
     const isArchived   = archivedIdx >= 0 && row[archivedIdx];
+    const assignIdx     = tableHeadings.findIndex(h => h === "Assignments");
+    const noAssigns     = assignIdx >= 0 && row[assignIdx] === 0;
 
     return (
       <tr
         key={rowIndex}
-        style={isArchived ? { backgroundColor: "rgba(255,0,0,0.4)" } : {}}
+
+       style={
+         noAssigns
+           ? { backgroundColor: "rgba(255,255,0,0.3)" }
+           : isArchived
+             ? { backgroundColor: "rgba(255,0,0,0.4)" }
+             : {}
+       }
       >
         {tableHeadings.map((heading, cellIndex) => {
           // Actions cell

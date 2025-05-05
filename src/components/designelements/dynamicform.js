@@ -25,7 +25,8 @@ function DynamicForm({
   sectionTitle,
   getSectionTitle,
   addButtonText,
-  initialSections
+  initialSections,
+  hideAddButton=false,
 }) {
   const [sections, setSections] = useState(initialSections || [{ id: 1, values: {} }]);
 
@@ -286,8 +287,9 @@ function DynamicForm({
           </Box>
         </Fade>
       ))}
-
+ {!hideAddButton && (
       <Zoom in>
+     
         <Button 
           variant="contained" 
           onClick={handleAddSection}
@@ -307,7 +309,9 @@ function DynamicForm({
         >
           {addButtonText}
         </Button>
+     
       </Zoom>
+       )}
     </Box>
   );
 }

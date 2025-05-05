@@ -22,7 +22,9 @@ function ResponsiveAppBar({ onLogout }) {
   const [token, setToken] = React.useState(localStorage.getItem('accessToken'));
   const [anchorEl, setAnchorEl] = React.useState(null);
   const open = Boolean(anchorEl);
-
+  const storedUser = localStorage.getItem("user");
+  const user = storedUser ? JSON.parse(storedUser) : null;
+  const isDEO = user?.role === "DEO";
   React.useEffect(() => {
     const handleStorageChange = () => setToken(localStorage.getItem('accessToken'));
     window.addEventListener('storage', handleStorageChange);
@@ -182,17 +184,16 @@ function ResponsiveAppBar({ onLogout }) {
               anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
               transformOrigin={{ horizontal: 'right', vertical: 'top' }}
             >
-                <MenuItem
+{isDEO && (
+  <MenuItem
     onClick={() => {
       navigate('/disciplines');
       handleClose();
     }}
   >
-    {/* you can add an icon if you like:
-      <ListItemIcon><SchoolIcon fontSize="small" /></ListItemIcon>
-    */}
     Manage Disciplines
   </MenuItem>
+)}
   <Divider />
               <MenuItem onClick={goToDashboard}>
                 <ListItemIcon><HomeIcon fontSize="small" /></ListItemIcon>Dashboard
