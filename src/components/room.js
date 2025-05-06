@@ -112,7 +112,12 @@ function Room() {
     room.Speaker ? "Available" : "Not Available",
     room.Room_status,
     room.Room_ID,
-  ]);
+  ])    .sort((a, b) =>
+    String(a[0]).localeCompare(String(b[0]), undefined, {
+      numeric: true,
+      sensitivity: "base",
+    })
+  );
   const handleStopEditing = () => {
     resetForm(); // Reuse your existing reset function
   };

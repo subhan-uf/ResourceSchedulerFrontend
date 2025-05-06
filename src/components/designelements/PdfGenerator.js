@@ -140,8 +140,14 @@ export const PdfGenerator = {
                                     <View key={index} style={styles.row}>
                                         <Text style={[styles.cell, { width: '25%' }]}>{course.code}</Text>
                                         <Text style={[styles.cell, { width: '30%' }]}>
-                                            {course.fullName} ({course.creditHours - course.labHours}+{course.labHours})
-                                        </Text>
+  {course.fullName} (
+    {course.nonCredit
+      ? 'NC'
+      : `${course.creditHours - course.labHours}+${course.labHours}`
+    }
+  )
+</Text>
+
                                         <Text style={[styles.cell, { width: '20%' }]}>{course.shortForm}</Text>
                                         <Text style={[styles.cell, { width: '25%' }]}>
                                             {sameTeacher ? (

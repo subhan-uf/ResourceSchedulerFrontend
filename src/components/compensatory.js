@@ -186,7 +186,7 @@ useEffect(() => {
         async function fetchRooms() {
           try {
             const resp = await roomService.getAllRooms();
-            setRooms(resp.data);
+            setRooms(resp.data.filter(r => r.Room_status !== "disable"));
           } catch (error) {
             console.error("Error fetching rooms:", error);
           }

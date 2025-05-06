@@ -6,7 +6,7 @@ import SignInbox from "./designelements/signing";
 import { useNavigate } from "react-router-dom";
 import CustomSnackbar from "./designelements/alert";
 import { Fade } from "@mui/material";
-
+import Button from "@mui/material/Button";
 function Login() {
   const tabNames = ["DEO", "Advisor"];
   const [selectedTab, setSelectedTab] = useState(0); // Track selected tab (0 or 1)
@@ -74,6 +74,23 @@ function Login() {
 
   return (
     <Fade in timeout={600}>
+       <Box sx={{ position: "relative", width: "100%" }}>
+        <Button
+          variant="contained"
+          color="secondary"
+          onClick={() => window.location.href = "http://127.0.0.1:8000/admin"}
+          sx={{
+            position: "fixed",
+            top: 16,
+            right: 16,
+            zIndex: 1300,
+            textTransform: "none",
+            fontWeight: 600,
+            boxShadow: "0px 4px 12px rgba(0,0,0,0.1)"
+          }}
+        >
+          Admin Login
+        </Button>
       <Box
         component="section"
         sx={{
@@ -110,6 +127,7 @@ function Login() {
           message={snackbar.message}
           color={snackbar.color}
         />
+      </Box>
       </Box>
     </Fade>
   );

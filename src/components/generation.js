@@ -135,14 +135,14 @@ const [currentAcademicYear, setCurrentAcademicYear] = useState(
         setRoomPrefs(roomPrefsRes.data || []);
 
         setTeachers(teachRes.data || []);
-        setRooms(
-          roomRes.data.filter(
-            (r) => r.Room_type.toLowerCase() === "classroom"
-          )
-        );
-        setLabRooms(
-          roomRes.data.filter((r) => r.Room_type.toLowerCase() === "lab")
-        );
+          const liveRooms = roomRes.data.filter(r => r.Room_status !== "disable");
+        
+          setRooms(
+            liveRooms.filter(r => r.Room_type.toLowerCase() === "classroom")
+          );
+          setLabRooms(
+            liveRooms.filter(r => r.Room_type.toLowerCase() === "lab")
+          );
         setSections(sectionRes.data || []);
         setBatches(batchRes.data || []);
         setCourses(courseRes.data || []);
@@ -801,11 +801,20 @@ result.timetable_headers.forEach(header => {
 });
 // console.log("Computed", computedLockedSlots)
 setLockedSlots(computedLockedSlots);
-    } catch (error) {
+    }catch (error) {
       console.error("Generation failed:", error);
-      if (error.response) {
-        console.error("Response data:", error.response.data);
-        console.error("Response status:", error.response.status);
+      // If the solver returns a 400, show your “no feasible” message
+      if (error.response?.status === 400 || error.code === 'ERR_BAD_REQUEST') {
+        setSnackbarMessage(
+          "No feasible timetable could be generated. Please reduce the teacher assignments or hard constraints."
+        );
+        setSnackbarColor("danger");
+        setSnackbarOpen(true);
+      } else {
+        // Other errors
+        setSnackbarMessage("An unexpected error occurred during generation.");
+        setSnackbarColor("danger");
+        setSnackbarOpen(true);
       }
     } finally {
       setLoading(false);

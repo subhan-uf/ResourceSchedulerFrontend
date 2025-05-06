@@ -503,6 +503,39 @@ const [searchCourseQuery, setSearchCourseQuery] = useState("");
           for (let i = 0; i < timePreferences.length; i++) {
           const data = timePreferences[i].values;
           const { course, section, day, startTime, endTime, multimedia, speaker, hard_constraint, labOrTheory } = data;
+          // ─── EDIT MODE HARD‐CONSTRAINT OVERLAP CHECK ───
+if (hard_constraint) {
+  const overlap = coursePrefs.find(cp => {
+    const id = cp.Preference_ID || cp.CoursePref_ID;
+    return (
+      cp.Teacher_ID.toString() === selectedTeacherId.toString() &&
+      cp.Day === day &&
+      cp.Hard_constraint === true &&
+      id.toString() !== editingId.toString() &&
+      (
+        cp.Start_time.slice(0,5) === startTime
+        // 2) exact end match
+        || cp.End_time.slice(0,5) === endTime||
+        (cp.Start_time.slice(0,5) === "08:30" && cp.End_time.slice(0,5) === "10:10"
+          && startTime === "09:20" && endTime === "11:00")
+        || (cp.Start_time.slice(0,5) === "09:20" && cp.End_time.slice(0,5) === "11:00"
+          && startTime === "08:30" && endTime === "10:10")
+        || (cp.Start_time.slice(0,5) === "02:00" && cp.End_time.slice(0,5) === "03:40"
+          && startTime === "02:50" && endTime === "04:30")
+        || (cp.Start_time.slice(0,5) === "02:50" && cp.End_time.slice(0,5) === "04:30"
+          && startTime === "02:00" && endTime === "03:40")
+      )
+    );
+  });
+  if (overlap) {
+    showSnackbar(
+      "This teacher cannot have more than one hard preferences on the same day and time.",
+      "danger"
+    );
+    return;
+  }
+}
+
           if (labOrTheory.toLowerCase() === "theory") {
             const courseObj = courses.find(c => c.Course_ID.toString() === course);
             if (!courseObj) {
@@ -711,6 +744,8 @@ const [searchCourseQuery, setSearchCourseQuery] = useState("");
           fetchCoursePrefs();
         }
       } else {
+
+
         if (preferredFloor.trim() !== "") {
           // Check if a floor preference already exists for this teacher
           const existingFloorPref = roomPrefs.find(
@@ -775,6 +810,35 @@ const allBCTAs = (bctaResp.data || []).filter(a => !a.Archived);
 for (const sec of timePreferences) {
   // Set default to false in case it's not defined
   const { course, section, day, startTime, endTime, multimedia, speaker, hard_constraint = false, labOrTheory } = sec.values;
+  // ─── CREATE MODE HARD‐CONSTRAINT OVERLAP CHECK ───
+if (hard_constraint) {
+  const overlap = coursePrefs.find(cp =>
+    cp.Teacher_ID.toString() === selectedTeacherId.toString() &&
+    cp.Day === day &&
+    cp.Hard_constraint === true &&
+    (
+      cp.Start_time.slice(0,5) === startTime
+      // 2) exact end match
+      || cp.End_time.slice(0,5) === endTime||
+      (cp.Start_time.slice(0,5) === "08:30" && cp.End_time.slice(0,5) === "10:10"
+        && startTime === "09:20" && endTime === "11:00")
+      || (cp.Start_time.slice(0,5) === "09:20" && cp.End_time.slice(0,5) === "11:00"
+        && startTime === "08:30" && endTime === "10:10")
+      || (cp.Start_time.slice(0,5) === "02:00" && cp.End_time.slice(0,5) === "03:40"
+        && startTime === "02:50" && endTime === "04:30")
+      || (cp.Start_time.slice(0,5) === "02:50" && cp.End_time.slice(0,5) === "04:30"
+        && startTime === "02:00" && endTime === "03:40")
+    )
+  );
+  if (overlap) {
+    showSnackbar(
+      "This teacher can only have one hard preferences on the same day and time.",
+      "danger"
+    );
+    return;
+  }
+}
+
   if (!labOrTheory) continue;
   if (labOrTheory.toLowerCase() === "theory") {
     // Retrieve course to check credit hours

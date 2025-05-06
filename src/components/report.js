@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import TeacherTabs from "./designelements/tabforall";
 import Tablereport from "./designelements/tablereport";
-import { Box } from "@mui/material";
+import { Box, FormControl, InputLabel, Typography } from "@mui/material";
 import { PdfGenerator } from "./designelements/PdfGenerator";
 import generationService from "./api/generationService";
 import BatchService from "./api/batchService";
@@ -11,6 +11,7 @@ import RoomService from "./api/roomService";
 import apiClient from "./api/apiClient";
 import teacherService from "./api/teacherService";
 import { CircularProgress } from "@mui/material";
+
  import {
      Dialog, DialogTitle, DialogContent, DialogActions,
      TextField, Select, MenuItem, Button
@@ -98,6 +99,7 @@ const fetchTimetableData = async () => {
           shortForm: course.Course_name,
           creditHours: course.Credit_hours,
           labHours: course.Is_Lab ? 1 : 0,
+          nonCredit: course.Non_Credit,  
           teachers: { theory: theoryTeacher, lab: labTeacher },
           labNumber: parseInt(labRoomNo, 10),
           slots: slots.flatMap(s => {
@@ -215,6 +217,16 @@ function Report() {
              setModalOpen(true);
            };
     console.log(timetableDict)
+           
+    const academicYearOptions = useMemo(() => {
+      const current = new Date().getFullYear();
+      // generate start years: current-2, current-1, current
+      return [current - 2, current - 1, current].map(y => `${y}-${y + 1}`);
+    }, []);
+
+
+
+
 
     const generatePdf = (discipline, academicYear, session, effectiveDate) => {        if (!timetableDict[discipline]) {
           console.error("No data found for", discipline);
@@ -286,28 +298,40 @@ sectionData.courses.forEach(course => {
 
     return (
       <div>
-        {loading ? (
-          <Box sx={{
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            height: '60vh'
-          }}>
-            <CircularProgress />
-          </Box>
+{loading ? (
+  <Box sx={{
+    display: 'flex',
+    flexDirection: 'column',     // stack vertically
+    justifyContent: 'center',
+    alignItems: 'center',
+    height: '60vh'
+  }}>
+    <CircularProgress />
+    <Typography variant="body1" sx={{ mt: 2 }}>
+      Fetching Timetable details, this can take up to a minute
+    </Typography>
+  </Box>
         ) : (
           <>
            <Dialog open={modalOpen} onClose={() => setModalOpen(false)}>
   <DialogTitle>Generate Timetable PDF</DialogTitle>
   <DialogContent>
-    <TextField
-      label="Academic Year (e.g. 2023-2024)"
-      value={academicYear}
-       fullWidth
-      margin="dense"
-      onChange={e => setAcademicYear(e.target.value)}
-      required
-    />
+  <FormControl fullWidth margin="dense" required>
+  <InputLabel id="year-select-label">Academic Year</InputLabel>
+  <Select
+    labelId="year-select-label"
+    label="Academic Year"
+    value={academicYear}
+    onChange={e => setAcademicYear(e.target.value)}
+  >
+    {academicYearOptions.map((yr) => (
+      <MenuItem key={yr} value={yr}>
+        {yr}
+      </MenuItem>
+    ))}
+  </Select>
+</FormControl>
+
     <Select value={session} fullWidth
       margin="dense" required onChange={e => setSession(e.target.value)}>
       <MenuItem value="Fall">Fall</MenuItem>

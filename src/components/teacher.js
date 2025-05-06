@@ -837,7 +837,7 @@ const updatedBCTAs = await batchCourseTeacherAssignmentService.getAllAssignments
   helperText="Phone number must be exactly 11 digits"
 />
 
-          <TextField
+          {/* <TextField
             label="Max Classes per Day"
             variant="outlined"
             type="number"
@@ -846,7 +846,7 @@ const updatedBCTAs = await batchCourseTeacherAssignmentService.getAllAssignments
             
             value={formData.Max_classes}
             onChange={handleInputChange}
-          />
+          /> */}
  <Singledropdown
             label="Health Limitation"
             value={formData.Health_limitation}

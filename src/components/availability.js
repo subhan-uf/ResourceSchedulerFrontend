@@ -56,8 +56,9 @@ useEffect(() => {
           // 2. Fetch teacher and room data (to get names/numbers)
           const teacherRes = await teacherService.getAllTeachers();
           const teachersData = teacherRes.data;
-          const roomRes = await RoomService.getAllRooms();
-          const roomsData = roomRes.data;
+           const roomRes = await RoomService.getAllRooms();
+           // drop any disabled rooms
+           const roomsData = roomRes.data.filter(r => r.Room_status !== "disable");
           const batchRes = await BatchService.getAllBatches();
 const batchesData = batchRes.data;
 const sectionRes = await SectionService.getAllSections();
@@ -169,13 +170,17 @@ const sectionsData = sectionRes.data;
             formatTimeDisplay(nextAvailable)
             ]);
           });
-          teacherAvailRows.sort((a, b) => {
-            if (a[0].toLowerCase() < b[0].toLowerCase()) return -1;
-            if (a[0].toLowerCase() > b[0].toLowerCase()) return 1;
-            return 0;
-          });
-          console.log(teacherAvailRows)
-          setTeacherAvailability(teacherAvailRows);
+// first Available, then Unavailable; within each group sort by teacher name
+teacherAvailRows.sort((a, b) => {
+  // a[1] and b[1] are "Available" or "Unavailable"
+  if (a[1] !== b[1]) {
+    return a[1] === "Available" ? -1 : 1;
+  }
+  // same availability, sort by name in a[0]
+  return a[0].localeCompare(b[0]);
+});
+setTeacherAvailability(teacherAvailRows);
+
       
           // 5. Compute room availability
           // Group valid timetable details by Room_ID for current day
@@ -297,11 +302,33 @@ if (isInClass && currentBatch) {
             ]);
           });
           // Sort roomAvailRows in ascending order by room number (assumed to be in index 0)
+// extract the numeric portion and sort numerically
 roomAvailRows.sort((a, b) => {
-    if (a[0].toLowerCase() < b[0].toLowerCase()) return -1;
-    if (a[0].toLowerCase() > b[0].toLowerCase()) return 1;
-    return 0;
-  });
+  const labelA = a[0];
+  const labelB = b[0];
+
+  // extract numeric value (if any) from each label
+  const numA = parseInt(labelA.match(/\d+/)?.[0] ?? "", 10);
+  const numB = parseInt(labelB.match(/\d+/)?.[0] ?? "", 10);
+
+  const isNumA = /^\d+$/.test(labelA);      // true if label is all digits
+  const isNumB = /^\d+$/.test(labelB);
+
+  if (isNumA && !isNumB) {
+    // A is a pure number, B is a lab → A comes first
+    return -1;
+  } else if (!isNumA && isNumB) {
+    // B is a pure number, A is a lab → B comes first
+    return 1;
+  } else {
+    // both same category (both numbers or both labs) → compare their numeric parts
+    return numA - numB;
+  }
+});
+
+setRoomAvailability(roomAvailRows);
+
+
   
           
           setRoomAvailability(roomAvailRows);

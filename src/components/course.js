@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import TabsTeachers from "./designelements/tabforall";
 import Tables from "./designelements/tables";
 import TextField from "@mui/material/TextField";
-import { Box, Button, FormControl, Typography } from "@mui/material";
+import { Box, Button, FormControl, FormHelperText, Typography } from "@mui/material";
 import Singledropdown from "./designelements/singledropdown";
 import AlertDialogModal from "./designelements/modal";
 import CustomSnackbar from "./designelements/alert";
@@ -32,9 +32,10 @@ function Course() {
     Course_fullname: "",
     Batch_ID: [],       // will now be an array of selected batch IDs
     Discipline: [],     // will now be an array (e.g. ["Computer Science", "Data Science"])
-    Max_classes_per_day: "",
+    // Max_classes_per_day: "",
     Credit_hours: "",
     Course_desc: "",
+    Non_Credit: false,
     Archived: false,
   });
   
@@ -108,7 +109,7 @@ function Course() {
     "Course Name",
     "Discipline",
     "Batch",
-    "Max Classes per Day",
+    // "Max Classes per Day",
     "Credit Hours",
     "Description",
     "Course Type",
@@ -146,7 +147,7 @@ function Course() {
       c.Course_name,
       (batches.find(b=>b.Batch_ID===c.Batch_ID)?.Discipline) || "N/A",
       (batches.find(b=>b.Batch_ID===c.Batch_ID)?.Batch_name)  || "N/A",
-      c.Max_classes_per_day,
+      // c.Max_classes_per_day,
       c.Credit_hours,
       c.Course_desc,
       c.Is_Lab ? "Lab+Theory Course" : "Theory Only Course",
@@ -250,10 +251,11 @@ function Course() {
         Course_fullname: foundCourse.Course_fullname || "",
         Batch_ID: foundCourse.Batch_ID || "",          // single value for editing
         Discipline: foundBatch?.Discipline || "",         // single value for editing
-        Max_classes_per_day: foundCourse.Max_classes_per_day?.toString() || "",
+        // Max_classes_per_day: foundCourse.Max_classes_per_day?.toString() || "",
         Credit_hours: foundCourse.Credit_hours?.toString() || "",
         Course_desc: foundCourse.Course_desc || "",
         Is_Lab: !!foundCourse.Is_Lab,
+        Non_Credit: !!foundCourse.Non_Credit,
         Archived:          !!foundCourse.Archived,
       });
       
@@ -306,12 +308,19 @@ function Course() {
   // -----------------------------
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (courseData.Credit_hours === "4" && !courseData.Is_Lab) {
+      showSnackbar("A 4-credit-hour course must be marked as Lab.", "danger");
+      return;
+    }
     try {
+      const normalizedCode = courseData.Course_code.toUpperCase();
       // This object has the correct numeric "Batch_ID" 
       // e.g. { Course_code: 'XYZ', Batch_ID: 10, ... }
       const payload = {
         ...courseData,
+        Course_code: normalizedCode,
         Is_Lab: !!courseData.Is_Lab,
+        Non_Credit: !!courseData.Non_Credit,
         // Assume Batch_ID is now an array; if your backend expects multiple batches,
         // send it as is. If your backend expects a single value, you might need to change that API.
         Archived: courseData.Archived,
@@ -384,9 +393,10 @@ function Course() {
       Course_fullname: "",
       Batch_ID: [],
       Discipline: [],
-      Max_classes_per_day: "",
+      // Max_classes_per_day: "",
       Credit_hours: "",
       Course_desc: "",
+      Non_Credit: false,
       Is_Lab: false,
     });
     setIsEditing(false);
@@ -526,7 +536,7 @@ const tabLabels = role === 'Advisor'
             setCourseData({ ...courseData, Course_desc: e.target.value })
           }
         />
-        <TextField
+        {/* <TextField
           label="Max classes per day"
           variant="outlined"
           type="number"
@@ -539,7 +549,7 @@ const tabLabels = role === 'Advisor'
               Max_classes_per_day: e.target.value,
             })
           }
-        />
+        /> */}
         <FormControl fullWidth required>
         <FormControl fullWidth required>
   <Singledropdown
@@ -555,13 +565,17 @@ const tabLabels = role === 'Advisor'
                   }))
                 }
     menuItems={[
-      { label: '0', value: '0' },
+  
       { label: '2', value: '2' },
       { label: '3', value: '3' },
       { label: '4', value: '4' },
     ]}
+    
     required
   />
+    <FormHelperText>
+    For Non-Credit courses: select the number of Sessions per week in this dropdown and check NC box
+  </FormHelperText>
 </FormControl>
 
 
@@ -642,6 +656,18 @@ const tabLabels = role === 'Advisor'
     setCourseData({ ...courseData, Is_Lab: newValue });
   }}
 />
+ <Checkboxx
+   label="Non-Credit course"
+   checked={courseData.Non_Credit}
+     onChange={(eOrChecked) => {
+        // your Checkboxx gives you `checked` boolean directly,
+        // MUI checkbox would give you event with target.checked
+        const val = typeof eOrChecked === 'boolean'
+          ? eOrChecked
+          : eOrChecked?.target?.checked;
+        setCourseData(prev => ({ ...prev, Non_Credit: val }));
+      }}
+ />
 
 
 
