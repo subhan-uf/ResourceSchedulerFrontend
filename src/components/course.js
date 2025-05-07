@@ -161,19 +161,23 @@ function Course() {
   });
     const archivedIdx = tableHeadings.findIndex(h => h === "Archived");
     const sortedRows = tableRows
-      .slice()
-      .sort((a, b) => {
-        const aArch = archivedIdx >= 0 && a[archivedIdx];
-        const bArch = archivedIdx >= 0 && b[archivedIdx];
-        // non-archived first
+    .slice()
+    .sort((a, b) => {
+      // 1) always put non-archived before archived
+      if (archivedIdx >= 0) {
+        const aArch = a[archivedIdx];
+        const bArch = b[archivedIdx];
         if (aArch !== bArch) return aArch ? 1 : -1;
-        // within same group, natural sort on first column
-        return String(a[0]).localeCompare(
-          String(b[0]),
-          undefined,
-          { numeric: true, sensitivity: 'base' }
-        );
+      }
+  
+      // 2) within the same archive status, sort by Course Name (column 1)
+      const nameA = String(a[1] || "").toLowerCase();
+      const nameB = String(b[1] || "").toLowerCase();
+      return nameA.localeCompare(nameB, undefined, {
+        numeric: true,
+        sensitivity: 'base'
       });
+    });
 
   async function fetchAllBctas() {
     const resp = await batchCourseTeacherAssignmentService.getAllAssignments();
