@@ -1,70 +1,131 @@
-# Getting Started with Create React App
+# FYPFinal – Advanced Academic Resource Scheduling System (Frontend)
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+## Overview
 
-## Available Scripts
+**FYPFinal** is a feature-rich frontend application for a highly sophisticated academic scheduling system, used by university administration, advisors, and DEOs. It provides granular control and visibility over timetabling, batch and course management, preferences, compensatory classes, availability, and user/discipline management.  
+**This frontend is tightly integrated with [FYPBackend](https://github.com/subhan-uf/fypbackend), which handles all data, business logic, and scheduling algorithms.**
 
-In the project directory, you can run:
+---
 
-### `npm start`
+## Deployment & Adoption
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+**The Resource Scheduling System is currently implemented at NED University of Engineering and Technology and actively used by multiple departments.**  
+It streamlines complex scheduling workflows for faculty, advisors, and administrative staff across various academic programs.
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+---
+## Key Features & Detailed Module Descriptions
 
-### `npm test`
+### Dashboard
+- Personalized welcome and quick navigation to all modules, with cards adapting to user role (Advisor or DEO).
+- Immediate access to Teacher, Room, Course, Batch, Timetable Generation, Preferences, Compensatory Classes, Availability, Reports, User Management, and Discipline Management.
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+### Teacher Management
+- List all teachers with search/filter capabilities.
+- Add, edit, or delete teachers; fields include username, email, name, phone, staff ID, year, faculty, seniority.
+- Form view for creating/updating teacher records.
+- Advisors see only a view list, DEOs have full management access.
 
-### `npm run build`
+### Room Management
+- View all rooms with search and filter.
+- Add new rooms, edit existing, or delete rooms.
+- Details include room number, type (lab/class), capacity, and status.
+- Tabs separate viewing, editing, and creation, adapted for Advisor/DEO roles.
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+### Course Management
+- List all courses with search and filtering.
+- Create, update, and delete courses.
+- Assign courses to batches, teachers, and disciplines.
+- View course details and associations.
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+### Batch Management
+- List all batches with search/filter.
+- Add new batches, edit, or delete existing batches.
+- Assign sections, set max students, manage batch details.
+- View batch timetables and assignments.
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+### Preferences & Constraints
+- Set and view room preferences (floor, location, etc.).
+- Set and view class time preferences (day, time slot).
+- Search/filter preferences by room or course.
+- Add, edit, and delete preference entries.
+- Manage constraints to guide timetable generation (room suitability, time constraints).
 
-### `npm run eject`
+### Timetable Generation
+- Batch-wise timetable generation using advanced backend algorithms.
+- View generated timetables, lock slots, disable days, and edit assignments.
+- Status indicators for each timetable (Published, Pending, etc.).
+- Modal for generation descriptions.
+- Table view of all generations with ID, description, status, time, last editor, and actions.
+- Interactive timetable UI: click slots to lock, click days to disable.
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+### Compensatory Classes
+- Book, manage, and visualize compensatory sessions for missed or extra classes.
+- Filter by week and session type (lab/theory).
+- View compensatory timetables in grid format, overlaid with regular and compensatory classes, including breaks and Salah rows.
+- Assign courses and rooms directly for compensatory sessions.
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+### Availability Tracking
+- Real-time tracking of teacher and room availability.
+- Tabs for "View teacher availability" and "View room availability".
+- For teachers: see if currently teaching, which room, next class, and next available slot.
+- For rooms: see if currently in use, which batch, next class, and next available time.
+- Search teachers/rooms, sort by name and availability.
+- Statuses (Available/Unavailable) are calculated dynamically based on timetable and current time.
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+### Reports
+- Download/view PDF copies of generated timetables.
+- Historical generations accessible for documentation and sharing.
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+### User Management (DEO only)
+- Add, edit, and manage users (advisors, DEOs).
+- Assign roles, update details, and manage all users in the system.
+- Table and form views for easy bulk and individual management.
 
-## Learn More
+### Discipline Management (DEO only)
+- Create and manage academic disciplines.
+- Link disciplines to courses and batches for organizational clarity.
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+---
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+## Pages & Navigation
 
-### Code Splitting
+- `/dashboard`: Role-based entry point with quick links to all modules.
+- `/teacher`: Teacher management (view/add/edit/delete).
+- `/room`: Room management (view/add/edit/delete).
+- `/course`: Course administration (view/add/edit/delete).
+- `/batch`: Batch administration (view/add/edit/delete).
+- `/preference`: Preferences and constraints setup (room and time).
+- `/compensatory`: Compensatory class booking and visualization.
+- `/generation`: Timetable generation, viewing, and editing.
+- `/report`: PDF timetable reports.
+- `/availability`: Real-time teacher and room availability.
+- `/user`: User management (DEO only).
+- `/disciplines`: Discipline management (DEO only).
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+Each page comes with advanced table views, forms, modals, and interactive components for data manipulation and visualization.
 
-### Analyzing the Bundle Size
+---
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+## Integration
 
-### Making a Progressive Web App
+**Backend:**  
+Requires [FYPBackend](https://github.com/subhan-uf/fypbackend) for all data, scheduling logic, and API endpoints.  
+Ensure the backend is deployed and configured for full system functionality.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+---
 
-### Advanced Configuration
+Click on the image below for a working demo:
+[![Watch Demo](https://img.youtube.com/vi/2wzoR2I6JvY/hqdefault.jpg)](https://youtu.be/2wzoR2I6JvY)
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
 
-### Deployment
+## License
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
+Distributed under the MIT License.
 
-### `npm run build` fails to minify
+---
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+## Support
+
+For issues, feature requests, or questions, [open an issue](https://github.com/subhan-uf/fypfinal/issues) or contact the repository owner.
+
+---
