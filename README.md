@@ -115,6 +115,8 @@ Ensure the backend is deployed and configured for full system functionality.
 ---
 
 Click on the image below for a working demo:
+
+
 [![Watch Demo](https://img.youtube.com/vi/2wzoR2I6JvY/hqdefault.jpg)](https://youtu.be/2wzoR2I6JvY)
 
 
