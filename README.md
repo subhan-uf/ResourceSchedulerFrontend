@@ -128,6 +128,6 @@ Distributed under the MIT License.
 
 ## Support
 
-For issues, feature requests, or questions, [open an issue](https://github.com/subhan-uf/fypfinal/issues) or contact the repository owner.
+For issues, feature requests or questions, [open an issue](https://github.com/subhan-uf/fypfinal/issues) or contact the repository owner.
 
 ---
