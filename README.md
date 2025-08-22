@@ -1,8 +1,8 @@
-# FYPFinal – Advanced Academic Resource Scheduling System (Frontend)
+# Resource Scheduling System – Advanced Academic Resource Scheduling System (Frontend)
 
 ## Overview
 
-**FYPFinal** is a feature-rich frontend application for a highly sophisticated academic scheduling system, used by university administration, advisors, and DEOs. It provides granular control and visibility over timetabling, batch and course management, preferences, compensatory classes, availability, and user/discipline management.  
+**Resource Scheduling System** is a feature-rich frontend application for a highly sophisticated academic scheduling system, used by university administration, advisors, and DEOs. It provides granular control and visibility over timetabling, batch and course management, preferences, compensatory classes, availability, and user/discipline management.  
 **This frontend is tightly integrated with [FYPBackend](https://github.com/subhan-uf/fypbackend), which handles all data, business logic, and scheduling algorithms.**
 
 ---
