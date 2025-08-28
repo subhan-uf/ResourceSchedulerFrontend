@@ -29,7 +29,7 @@ It streamlines complex scheduling workflows for faculty, advisors, and administr
 - View all rooms with search and filter.
 - Add new rooms, edit existing, or delete rooms.
 - Details include room number, type (lab/class), capacity, and status.
-- Tabs separate viewing, editing, and creation, adapted for Advisor/DEO roles.
+- Tabs separate viewing, editing, and creation, adapted for Advisor/DEO roles
 
 ### Course Management
 - List all courses with search and filtering.
